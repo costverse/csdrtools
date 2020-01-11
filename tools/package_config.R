@@ -30,15 +30,15 @@ description <- list(Description = "Tools for Cost and Software Data Reporting (C
 
 # Package dependencies
 usethis::use_pipe()
-usethis::use_package("dplyr", min_version = "0.8.3")
-usethis::use_package("tidyr", min_version = "1.0.0")
-usethis::use_package("tibble", min_version = "2.0.0")
-usethis::use_package("purrr", min_version = "0.3.3")
-usethis::use_package("rlang", min_version = "0.4.2")
-usethis::use_package("pillar", min_version = "1.4.0")
-usethis::use_package("stringr", min_version = "1.4.0")
-usethis::use_package("crayon", min_version = "1.3.4")
-usethis::use_package("lifecycle")
+#usethis::use_package("dplyr", min_version = "0.8.3")
+#usethis::use_package("tidyr", min_version = "1.0.0")
+#usethis::use_package("tibble", min_version = "2.0.0")
+#usethis::use_package("purrr", min_version = "0.3.3")
+#usethis::use_package("rlang", min_version = "0.4.2")
+#usethis::use_package("pillar", min_version = "1.4.0")
+#usethis::use_package("stringr", min_version = "1.4.0")
+#usethis::use_package("crayon", min_version = "1.3.4")
+#usethis::use_package("lifecycle")
 
 ## ===== README & NEWS =====
 
@@ -47,7 +47,7 @@ usethis::use_readme_rmd()
 usethis::use_news_md()
 
 usethis::use_lifecycle_badge("questioning")
-usethis::use_badge("Build: passing", "https://gitlab.technomics.net/ajames/ff2db", "https://img.shields.io/badge/build-passing-green.svg")
+#usethis::use_badge("Build: passing", "https://gitlab.technomics.net/ajames/ff2db", "https://img.shields.io/badge/build-passing-green.svg")
 usethis::use_badge("License: GPLv3", "https://opensource.org/licenses/GPL-3.0", "https://img.shields.io/badge/License-GPLv3-blue.svg")
 
 
