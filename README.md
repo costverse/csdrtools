@@ -4,7 +4,8 @@ csdrtools
 =========
 
 <!-- badges: start -->
-<!-- badges: end -->
+[![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing) [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0) <!-- badges: end -->
+
 The goal of csdrtools is to ...
 
 Installation
