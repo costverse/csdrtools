@@ -11,15 +11,19 @@ usethis::use_build_ignore("tools")
 usethis::use_lifecycle()
 
 # License
-usethis::use_gpl3_license("Adam H. James (Technomics, Inc.)")
+usethis::use_gpl3_license("costverse")
 
 ## ===== DESCRIPTION =====
 
 # Description list
-description <- list(Description = "Functions to assist in working with work breakdown structures.",
-                    Title = "Flat file to database",
-                    `Authors@R` = list(person(given = "Adam H.", family = "James",
-                                              email = "ajames@technomics.net", role = c("cre","aut"))))
+description <- list(Description = "Tools for Cost and Software Data Reporting (CSDR) data",
+                    Title = "Tools for CSDR data",
+                    `Authors@R` = list(person(given = "Daniel", family = "Germony",
+                                              email = "daniel.r.germony.civ@mail.mil", role = c("cre","aut")),
+                                       person(given = "Adam H.", family = "James",
+                                              email = "ajames@technomics.net", role = c("aut")),
+                                       person(given = "Justin", family = "Cooper",
+                                              email = "jcooper@technomics.net", role = c("aut"))))
 
 # Run this to set description. It will replace whatever is there! Keep in mind the version before doing this.
 # usethis::use_description(description)
