@@ -69,7 +69,8 @@ flatten_ff <- function(flexfile) {
     
     #Bind the above two tables
     dplyr::bind_rows(flat_ff, flat_ff_forecast)
-    
+    # Cleansed ----
+    flat_ff <- janitor::clean_names(flat_ff)
     
   } else {
  
@@ -134,7 +135,14 @@ flatten_ff <- function(flexfile) {
     
     #Bind ----
     flat_ff_2 <- dplyr::bind_rows(flat_ff, flat_ff_forecast)
-     
+    # Cleansed ----
+    flat_ff_2 <- janitor::clean_names(flat_ff_2)
+    
   }
   
   }
+
+
+flattened_ff <- flatten_ff(ffiles_one)
+
+flattened_ffs <- flatten_ff(ffiles_uid)
