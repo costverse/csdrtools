@@ -2,11 +2,11 @@ library(magrittr)
 
 #creates a master flatfile from the flexfile tables
 #joins IDs to Names (Account, Functional Category, OrderOrLot, etc.)
-#binds forecasts to actuals
-
+#stacks forecasts and actuals
 
 flatten_ff <- function(flexfile) {
   
+  #if number of FlexFiles > 1, must also join on ff_id
   if ("ff_id" %in% colnames(flexfile$ActualCostHourData)) {
     
     #Aligning IDs from ActualCostHourData table to Names from lookup tables
@@ -67,11 +67,12 @@ flatten_ff <- function(flexfile) {
     
     flat_ff_forecast$ATD_Or_FAC <- "FAC"
     
-    #Bind the above two tables
+    #bind actuals and forecasts
     dplyr::bind_rows(flat_ff, flat_ff_forecast)
-    # Cleansed ----
-    flat_ff <- janitor::clean_names(flat_ff)
     
+    flat_ff <- janitor::clean_names(flat_ff)
+   
+    #if number of FlexFiles == 1, only join on one column
   } else {
  
     flat_ff <- dplyr::left_join(flexfile$ActualCostHourData, 
@@ -133,16 +134,15 @@ flatten_ff <- function(flexfile) {
     flat_ff_forecast$ATD_Or_FAC <- "FAC"
     flat_ff_forecast$ff_id <- NULL
     
-    #Bind ----
+    #bind actuals and forecasts
     flat_ff_2 <- dplyr::bind_rows(flat_ff, flat_ff_forecast)
-    # Cleansed ----
+    
     flat_ff_2 <- janitor::clean_names(flat_ff_2)
     
   }
   
   }
 
-
-flattened_ff <- flatten_ff(ffiles_one)
-
-flattened_ffs <- flatten_ff(ffiles_uid)
+#examples ----
+flattened_ff <- flatten_ff(ffiles_one) #one FlexFile
+flattened_ffs <- flatten_ff(ffiles_uid) #more than one FlexFile
