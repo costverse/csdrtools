@@ -82,7 +82,10 @@ ffiles_uid <- ffiles_stack(ffiles_mult)
 # ======================================================================================================
 clean_ff_names <- function(ff_list) {
   
-  # ff <- janitor::clean_names(ff_list)  
+  names(ff_list) <- janitor::make_clean_names(names(ff_list))
+  
+  names(ff_list)[names(ff_list)=="cli_ns"] <- "clins"
+  
   ff <- ff_list
   for(i in 1:length(ff)){
     ff[[i]] <- janitor::clean_names(ff[[i]])
