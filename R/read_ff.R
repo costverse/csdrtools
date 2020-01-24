@@ -95,4 +95,6 @@ clean_ff_names <- function(ff_list) {
 }
 ## Examle =============================================================================================
 
-ffiles_cleaned <- clean_ff_names(ffiles_uid)
+ff_cleansed_one <- clean_ff_names(ffiles_one)
+ff_cleansed_two <- clean_ff_names(ffiles_uid)
+

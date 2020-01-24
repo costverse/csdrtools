@@ -143,7 +143,7 @@ flatten_ff <- function(flexfile) {
 }
 
 #examples ----
-flattened_ff <- flatten_ff(ffiles_cleaned_1) #one FlexFile
+flattened_ff <- flatten_ff(ff_cleansed_one) #one FlexFile
 
-flattened_ffs <- flatten_ff(ffiles_cleaned_2) #more than one FlexFile
+flattened_ffs <- flatten_ff(ff_cleansed_two) #more than one FlexFile
 
