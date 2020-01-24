@@ -69,6 +69,10 @@ flatten_ff <- function(flexfile) {
     #bind actuals and forecasts
     flat_ff_2 <- dplyr::bind_rows(flat_ff, flat_ff_forecast)
     
+    flat_ff_2 <- flat_ff_2 %>%
+      dplyr::select(value_dollars, value_hours, dplyr::everything()) %>%
+      dplyr::select(3:ncol(flat_ff_2), value_dollars, value_hours)
+    
     #if number of FlexFiles == 1, only join on one column
   } else {
     
@@ -136,7 +140,9 @@ flatten_ff <- function(flexfile) {
     #bind actuals and forecasts
     flat_ff_2 <- dplyr::bind_rows(flat_ff, flat_ff_forecast)
     
-    
+    flat_ff_2 <- flat_ff_2 %>%
+      dplyr::select(value_dollars, value_hours, dplyr::everything()) %>%
+      dplyr::select(3:ncol(flat_ff_2), value_dollars, value_hours)
     
   }
   
@@ -146,4 +152,3 @@ flatten_ff <- function(flexfile) {
 flattened_ff <- flatten_ff(ff_cleansed_one) #one FlexFile
 
 flattened_ffs <- flatten_ff(ff_cleansed_two) #more than one FlexFile
-
