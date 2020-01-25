@@ -35,7 +35,7 @@ ffiles_mult <- import_ffiles_json_native("O:/Personal/Ben Berkman/costverse proj
 ffiles_one <- import_ffiles_json_native("O:/Personal/Ben Berkman/costverse project/csdrtools/R/Fake Data/One_Submission/")
 
 
-## Assings UID to each FlexFile List, using Submission event number, flattens lists and binds by dataframe ----
+## If multiple flexfiles, stacks them into one list ----
 ffiles_stack <- function(ffiles_list) {
 
   stacked <- split(ffiles_list, names(ffiles_list)) %>% 
@@ -63,7 +63,8 @@ clean_ff_names <- function(ff_list) {
   }
   ff
 }
-## Example
+
+## Examples
 
 ff_cleansed_one <- clean_ff_names(ffiles_one)
 ff_cleansed_two <- clean_ff_names(ffiles_mult)
