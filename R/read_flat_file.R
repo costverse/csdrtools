@@ -76,6 +76,8 @@ read_flat_file <- function(path){
       UnitOfMeasure,
       Recurring_Nonrecurring,
       ToDate_AtCompletion,
+      FunctionalCategory,
+      FunctionalElement,
       Value,
       WBSElementRemarks,
       FullName
