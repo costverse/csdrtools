@@ -57,7 +57,7 @@ flat_file <- structure(
       `Price AC` = numeric(),
       `DD 1921 Remarks` = character()
     ),
-    Data = tibble(
+    Data = tibble::tibble(
       address = character(),
       WBSElementID = factor(),
       WBSElementName = factor(),
@@ -75,7 +75,7 @@ flat_file <- structure(
       WBSElementRemarks = character(),
       FullName = character(),
     ),
-    Definitions = tibble(
+    Definitions = tibble::tibble(
       ColumnLetter = character(),
       ColumnLabel = character(),
       FullName = character(),
@@ -86,8 +86,11 @@ flat_file <- structure(
       Recurring_Nonrecurring = character(),
       FunctionalCategory = character(),
       FunctionalElement = character()
-      )
+    )
   ),
   class = "flat_file"
 )
-  
+
+new_flat_file <- function(...) {
+  structure(flat_file, class = "flat_file")
+}
