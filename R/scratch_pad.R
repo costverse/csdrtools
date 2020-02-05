@@ -50,7 +50,6 @@ foo %>% pivot_flat_file("Dollars", FunctionalElement) %>%
   summarise_if(is.numeric, sum, rm.na = TRUE)
 
 
-
     `Direct Engineering Labor` = sum(`Direct Engineering Labor`),
     `Engineering Overhead` = sum(`Engineering Overhead`),
     `Direct Tooling Labor` = sum(`Direct Tooling Labor`),
