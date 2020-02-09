@@ -10,7 +10,10 @@
 #' @return Returns a flat_file list object. The first list object, `MetaData` is
 #'   the submission's metadata, the second list object, `Data` includes the
 #'   cost, hours, and unit data by WBS, To Date and At Completion, by Recurring
-#'   and Nonrecurring, and by Functional Element and Functional Category.
+#'   and Nonrecurring, and by Functional Element and Functional Category. The
+#'   third list object, `Definitions` comes from the cPet created "Definitions"
+#'   worksheet (the source column names are covered to camel case to behave
+#'   nicely in R).
 #' @export
 #'
 #' @examples
@@ -18,6 +21,9 @@
 read_flat_file <- function(path){
 
   # TODO: write or find an xls to xlsx converter and convert the xls file to xlsx on the fly if needed.
+  # TODO: write a helper to ensure the provided path is an Excel file and has a "Data" worksheet with in the "flat file" format.
+  # TODO: add the ability to import and convert from $k or hours_k to $ or hours on import.
+  # TODO: add the ability to convert `MetaData` into FlexFile format.
   
   flat_file <- new_flat_file()
   
