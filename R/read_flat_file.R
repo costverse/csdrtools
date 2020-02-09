@@ -19,7 +19,7 @@
 #' @examples
 #' foo <- read_flat_file(here::here("data, "Flat_File.xlsx"))
 read_flat_file <- function(path){
-
+  
   # TODO: write or find an xls to xlsx converter and convert the xls file to xlsx on the fly if needed.
   # TODO: write a helper to ensure the provided path is an Excel file and has a "Data" worksheet with in the "flat file" format.
   # TODO: add the ability to import and convert from $k or hours_k to $ or hours on import.
@@ -28,7 +28,7 @@ read_flat_file <- function(path){
   flat_file <- new_flat_file()
   
   submission <- tidyxl::xlsx_cells(path)
-
+  
   flat_file$Data <- submission %>% 
     dplyr::filter(sheet == "Data",
                   col >= 4) %>% 
@@ -167,7 +167,7 @@ read_flat_file <- function(path){
       -ColumnLetter, 
       -CDSRLocation, 
       -FCHRLocation
-      ) %>%
+    ) %>%
     dplyr::select( # Column reorder
       address,
       WBSElementID,
@@ -186,7 +186,7 @@ read_flat_file <- function(path){
         ToDate_AtCompletion == "To Date" ~ "ToDate",
         ToDate_AtCompletion == "At Completion" ~ "AtCompletion",
         TRUE ~ NA_character_
-        )
+      )
     ) 
   
   flat_file$Data$UnitOfMeasure <- flat_file$Data$UnitOfMeasure %>% factor(levels = c("Dollars", "Hours", "Units"))
@@ -201,18 +201,18 @@ read_flat_file <- function(path){
                   col %in% c(1, 2)) %>%
     unpivotr::behead(direction = "W", name = "Field") %>%
     dplyr::select(col,
-           data_type,
-           error,
-           logical,
-           numeric,
-           date,
-           character,
-           Field) %>%
+                  data_type,
+                  error,
+                  logical,
+                  numeric,
+                  date,
+                  character,
+                  Field) %>%
     unpivotr::spatter(Field) %>%
     dplyr::select(-col,
-           -error,
-           -logical
-           ) %>% 
+                  -error,
+                  -logical
+    ) %>% 
     dplyr::mutate(
       `Data Type` = as.character(`Data Type`),
       `Data Version` = as.character(`Data Version`),
