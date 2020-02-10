@@ -146,7 +146,7 @@ read_flat_file <- function(path){
               "BZ",           "NR Other $ AC",           "Nonrecurring Other Costs Not Shown Elsewhere Incurred At Completion",            "N/A", "Line 20, Column D",        "Dollars",            "At Completion",              "Nonrecurring",                    "Other",   "Other Costs Not Shown Elsewhere",
               "CA",          "Rec Other $ AC",              "Recurring Other Costs Not Shown Elsewhere Incurred At Completion",            "N/A", "Line 20, Column E",        "Dollars",            "At Completion",                 "Recurring",                    "Other",   "Other Costs Not Shown Elsewhere",
               "CB",                 "Remarks",                                                                       "Remarks",            "N/A",           "Item 22",            "N/A",                      "N/A",                       "N/A",                      "N/A",                               "N/A"
-    ) %>% dplyr::mutate_all(str_replace_all, "N/A", NA_character_) %>% 
+    ) %>% dplyr::mutate_all(stringr::str_replace_all, "N/A", NA_character_) %>% 
     dplyr::rename(
       ColumnLetter = `Column Letter`,
       ColumnLabel = `Column Label`,
