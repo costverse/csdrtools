@@ -24,10 +24,12 @@ read_flat_file <- function(path){
   # TODO: write a helper to ensure the provided path is an Excel file and has a "Data" worksheet with in the "flat file" format.
   # TODO: add the ability to import and convert from $k or hours_k to $ or hours on import.
   # TODO: add the ability to convert `MetaData` into FlexFile format.
-  
+
   flat_file <- new_flat_file()
   
   submission <- tidyxl::xlsx_cells(path)
+  
+  if (dplyr::filter(submission, sheet == "Data", address == "B1") %>% pull(character) == "1921/1921-1 Input") {
   
   flat_file$Data <- submission %>% 
     dplyr::filter(sheet == "Data",
@@ -36,7 +38,6 @@ read_flat_file <- function(path){
     unpivotr::behead(direction = "W", name = "WBSElementID") %>% 
     unpivotr::behead(direction = "W", name = "WBSElementName") %>% 
     unpivotr::behead(direction = "E", name = "WBSElementRemarks") %>% 
-    dplyr::filter(is_blank != TRUE) %>% 
     dplyr::select(address, 
                   WBSElementID, 
                   WBSElementName, 
@@ -46,119 +47,6 @@ read_flat_file <- function(path){
   
   flat_file$Data$WBSElementID <- flat_file$Data$WBSElementID %>% forcats::fct_inorder()
   flat_file$Data$WBSElementName <- flat_file$Data$WBSElementName %>% forcats::fct_inorder()
-  
-  # flat_file$Definitions <- submission %>% 
-  #   dplyr::filter(sheet == "Definitions") %>% 
-  #   unpivotr::rectify() %>% 
-  #   dplyr::select(-`row/col`) %>% 
-  #   rlang::set_names(., nm = .[1,]) %>% 
-  #   dplyr::slice(-1) %>%
-  #   dplyr::mutate_all(str_replace_all, "N/A", NA_character_) %>%
-  #   dplyr::rename(
-  #     ColumnLetter = `Column Letter`,
-  #     ColumnLabel = `Column Label`,
-  #     FullName = `Full Name`,
-  #     CDSRLocation = `1921 Location`,
-  #     FCHRLocation = `1921-1 Location`,
-  #     UnitOfMeasure = `Unit of Measure`,
-  #     ToDate_AtCompletion = `To Date / \r\nAt Completion`,
-  #     Recurring_Nonrecurring = `Recurring / Nonrecurring`,
-  #     FunctionalCategory = `Functional Category`,
-  #     FunctionalElement = `Functional Element`
-  #   )
-  
-  flat_file$Definitions <-  tibble::tribble(
-    ~`Column Letter`,             ~`Column Label`,                                                                      ~`Full Name`, ~`1921 Location`,  ~`1921-1 Location`, ~`Unit of Measure`, ~`To Date / \r\nAt Completion`, ~`Recurring / Nonrecurring`,       ~`Functional Category`,                 ~`Functional Element`,
-               "D",                "WBS Code",                                                                      "WBS Code",       "Column A",           "Item 18",            "N/A",                      "N/A",                       "N/A",                      "N/A",                               "N/A",
-               "E",  "WBS Reporting Elements",                                                        "WBS Reporting Elements",       "Column B",           "Item 19",            "N/A",                      "N/A",                       "N/A",                      "N/A",                               "N/A",
-               "F",                "Units TD",                                                       "Number of Units To Date",       "Column C",          "Item 20a",          "Units",                  "To Date",                 "Recurring",                      "N/A",                               "N/A",
-               "G",                 "NR $ TD",                                           "Nonrecurring Costs Incurred To Date",       "Column D", "Line 21, Column A",        "Dollars",                  "To Date",              "Nonrecurring",                      "N/A",                               "N/A",
-               "H",                "Rec $ TD",                                              "Recurring Costs Incurred To Date",       "Column E", "Line 21, Column B",        "Dollars",                  "To Date",                 "Recurring",                      "N/A",                               "N/A",
-               "I",                "Units AC",                                                 "Number of Units At Completion",       "Column G",          "Item 20b",          "Units",            "At Completion",                 "Recurring",                      "N/A",                               "N/A",
-               "J",                 "NR $ AC",                                     "Nonrecurring Costs Incurred At Completion",       "Column H", "Line 21, Column D",        "Dollars",            "At Completion",              "Nonrecurring",                      "N/A",                               "N/A",
-               "K",                "Rec $ AC",                                        "Recurring Costs Incurred At Completion",       "Column I", "Line 21, Column E",        "Dollars",            "At Completion",                 "Recurring",                      "N/A",                               "N/A",
-               "L",           "NR Eng Hrs TD",                  "Nonrecurring Direct Engineering Labor Hours Incurred To Date",            "N/A",  "Line 1, Column A",          "Hours",                  "To Date",              "Nonrecurring",              "Engineering",          "Direct Engineering Labor",
-               "M",          "Rec Eng Hrs TD",                     "Recurring Direct Engineering Labor Hours Incurred To Date",            "N/A",  "Line 1, Column B",          "Hours",                  "To Date",                 "Recurring",              "Engineering",          "Direct Engineering Labor",
-               "N",           "NR Eng Hrs AC",            "Nonrecurring Direct Engineering Labor Hours Incurred At Completion",            "N/A",  "Line 1, Column D",          "Hours",            "At Completion",              "Nonrecurring",              "Engineering",          "Direct Engineering Labor",
-               "O",          "Rec Eng Hrs AC",               "Recurring Direct Engineering Labor Hours Incurred At Completion",            "N/A",  "Line 1, Column E",          "Hours",            "At Completion",                 "Recurring",              "Engineering",          "Direct Engineering Labor",
-               "P",      "NR Direct Eng $ TD",                "Nonrecurring Direct Engineering Labor Dollars Incurred To Date",            "N/A",  "Line 2, Column A",        "Dollars",                  "To Date",              "Nonrecurring",              "Engineering",          "Direct Engineering Labor",
-               "Q",     "Rec Direct Eng $ TD",                   "Recurring Direct Engineering Labor Dollars Incurred To Date",            "N/A",  "Line 2, Column B",        "Dollars",                  "To Date",                 "Recurring",              "Engineering",          "Direct Engineering Labor",
-               "R",      "NR Direct Eng $ AC",          "Nonrecurring Direct Engineering Labor Dollars Incurred At Completion",            "N/A",  "Line 2, Column D",        "Dollars",            "At Completion",              "Nonrecurring",              "Engineering",          "Direct Engineering Labor",
-               "S",     "Rec Direct Eng $ AC",             "Recurring Direct Engineering Labor Dollars Incurred At Completion",            "N/A",  "Line 2, Column E",        "Dollars",            "At Completion",                 "Recurring",              "Engineering",          "Direct Engineering Labor",
-               "T",          "NR Eng OH $ TD",                    "Nonrecurring Engineering Overhead Dollars Incurred To Date",            "N/A",  "Line 3, Column A",        "Dollars",                  "To Date",              "Nonrecurring",              "Engineering",              "Engineering Overhead",
-               "U",         "Rec Eng OH $ TD",                       "Recurring Engineering Overhead Dollars Incurred To Date",            "N/A",  "Line 3, Column B",        "Dollars",                  "To Date",                 "Recurring",              "Engineering",              "Engineering Overhead",
-               "V",          "NR Eng OH $ AC",              "Nonrecurring Engineering Overhead Dollars Incurred At Completion",            "N/A",  "Line 3, Column D",        "Dollars",            "At Completion",              "Nonrecurring",              "Engineering",              "Engineering Overhead",
-               "W",         "Rec Eng OH $ AC",                 "Recurring Engineering Overhead Dollars Incurred At Completion",            "N/A",  "Line 3, Column E",        "Dollars",            "At Completion",                 "Recurring",              "Engineering",              "Engineering Overhead",
-               "X",          "NR Tool Hrs TD",                      "Nonrecurring Direct Tooling Labor Hours Incurred To Date",            "N/A",  "Line 5, Column A",          "Hours",                  "To Date",              "Nonrecurring",                  "Tooling",              "Direct Tooling Labor",
-               "Y",         "Rec Tool Hrs TD",                         "Recurring Direct Tooling Labor Hours Incurred To Date",            "N/A",  "Line 5, Column B",          "Hours",                  "To Date",                 "Recurring",                  "Tooling",              "Direct Tooling Labor",
-               "Z",          "NR Tool Hrs AC",                "Nonrecurring Direct Tooling Labor Hours Incurred At Completion",            "N/A",  "Line 5, Column D",          "Hours",            "At Completion",              "Nonrecurring",                  "Tooling",              "Direct Tooling Labor",
-              "AA",         "Rec Tool Hrs AC",                   "Recurring Direct Tooling Labor Hours Incurred At Completion",            "N/A",  "Line 5, Column E",          "Hours",            "At Completion",                 "Recurring",                  "Tooling",              "Direct Tooling Labor",
-              "AB",     "NR Tool Direct $ TD",                    "Nonrecurring Direct Tooling Labor Dollars Incurred To Date",            "N/A",  "Line 6, Column A",        "Dollars",                  "To Date",              "Nonrecurring",                  "Tooling",              "Direct Tooling Labor",
-              "AC",    "Rec Tool Direct $ TD",                       "Recurring Direct Tooling Labor Dollars Incurred To Date",            "N/A",  "Line 6, Column B",        "Dollars",                  "To Date",                 "Recurring",                  "Tooling",              "Direct Tooling Labor",
-              "AD",     "NR Tool Direct $ AC",              "Nonrecurring Direct Tooling Labor Dollars Incurred At Completion",            "N/A",  "Line 6, Column D",        "Dollars",            "At Completion",              "Nonrecurring",                  "Tooling",              "Direct Tooling Labor",
-              "AE",    "Rec Tool Direct $ AC",                 "Recurring Direct Tooling Labor Dollars Incurred At Completion",            "N/A",  "Line 6, Column E",        "Dollars",            "At Completion",                 "Recurring",                  "Tooling",              "Direct Tooling Labor",
-              "AF",      "NR Tool/Equip $ TD",              "Nonrecurring Direct Tooling & Equipment Dollars Incurred To Date",            "N/A",  "Line 7, Column A",        "Dollars",                  "To Date",              "Nonrecurring",                  "Tooling",        "Direct Tooling & Equipment",
-              "AG",     "Rec Tool/Equip $ TD",                 "Recurring Direct Tooling & Equipment Dollars Incurred To Date",            "N/A",  "Line 7, Column B",        "Dollars",                  "To Date",                 "Recurring",                  "Tooling",        "Direct Tooling & Equipment",
-              "AH",      "NR Tool/Equip $ AC",        "Nonrecurring Direct Tooling & Equipment Dollars Incurred At Completion",            "N/A",  "Line 7, Column D",        "Dollars",            "At Completion",              "Nonrecurring",                  "Tooling",        "Direct Tooling & Equipment",
-              "AI",     "Rec Tool/Equip $ AC",           "Recurring Direct Tooling & Equipment Dollars Incurred At Completion",            "N/A",  "Line 7, Column E",        "Dollars",            "At Completion",                 "Recurring",                  "Tooling",        "Direct Tooling & Equipment",
-              "AJ",            "NR QC Hrs TD",              "Nonrecurring Direct Quality Control Labor Hours Incurred To Date",            "N/A",  "Line 8, Column A",          "Hours",                  "To Date",              "Nonrecurring",          "Quality Control",      "Direct Quality Control Labor",
-              "AK",           "Rec QC Hrs TD",                 "Recurring Direct Quality Control Labor Hours Incurred To Date",            "N/A",  "Line 8, Column B",          "Hours",                  "To Date",                 "Recurring",          "Quality Control",      "Direct Quality Control Labor",
-              "AL",            "NR QC Hrs AC",        "Nonrecurring Direct Quality Control Labor Hours Incurred At Completion",            "N/A",  "Line 8, Column D",          "Hours",            "At Completion",              "Nonrecurring",          "Quality Control",      "Direct Quality Control Labor",
-              "AM",           "Rec QC Hrs AC",           "Recurring Direct Quality Control Labor Hours Incurred At Completion",            "N/A",  "Line 8, Column E",          "Hours",            "At Completion",                 "Recurring",          "Quality Control",      "Direct Quality Control Labor",
-              "AN",       "NR QC Direct $ TD",            "Nonrecurring Direct Quality Control Labor Dollars Incurred To Date",            "N/A",  "Line 9, Column A",        "Dollars",                  "To Date",              "Nonrecurring",          "Quality Control",      "Direct Quality Control Labor",
-              "AO",      "Rec QC Direct $ TD",               "Recurring Direct Quality Control Labor Dollars Incurred To Date",            "N/A",  "Line 9, Column B",        "Dollars",                  "To Date",                 "Recurring",          "Quality Control",      "Direct Quality Control Labor",
-              "AP",       "NR QC Direct $ AC",      "Nonrecurring Direct Quality Control Labor Dollars Incurred At Completion",            "N/A",  "Line 9, Column D",        "Dollars",            "At Completion",              "Nonrecurring",          "Quality Control",      "Direct Quality Control Labor",
-              "AQ",      "Rec QC Direct $ AC",         "Recurring Direct Quality Control Labor Dollars Incurred At Completion",            "N/A",  "Line 9, Column E",        "Dollars",            "At Completion",                 "Recurring",          "Quality Control",      "Direct Quality Control Labor",
-              "AR",           "NR MFG Hrs TD",                "Nonrecurring Direct Manufacturing Labor Hours Incurred To Date",            "N/A", "Line 10, Column A",          "Hours",                  "To Date",              "Nonrecurring",            "Manufacturing",        "Direct Manufacturing Labor",
-              "AS",          "Rec MFG Hrs TD",                   "Recurring Direct Manufacturing Labor Hours Incurred To Date",            "N/A", "Line 10, Column B",          "Hours",                  "To Date",                 "Recurring",            "Manufacturing",        "Direct Manufacturing Labor",
-              "AT",           "NR MFG Hrs AC",          "Nonrecurring Direct Manufacturing Labor Hours Incurred At Completion",            "N/A", "Line 10, Column D",          "Hours",            "At Completion",              "Nonrecurring",            "Manufacturing",        "Direct Manufacturing Labor",
-              "AU",          "Rec MFG Hrs AC",             "Recurring Direct Manufacturing Labor Hours Incurred At Completion",            "N/A", "Line 10, Column E",          "Hours",            "At Completion",                 "Recurring",            "Manufacturing",        "Direct Manufacturing Labor",
-              "AV",      "NR MFG Direct $ TD",              "Nonrecurring Direct Manufacturing Labor Dollars Incurred To Date",            "N/A", "Line 11, Column A",        "Dollars",                  "To Date",              "Nonrecurring",            "Manufacturing",        "Direct Manufacturing Labor",
-              "AW",     "Rec MFG Direct $ TD",                 "Recurring Direct Manufacturing Labor Dollars Incurred To Date",            "N/A", "Line 11, Column B",        "Dollars",                  "To Date",                 "Recurring",            "Manufacturing",        "Direct Manufacturing Labor",
-              "AX",      "NR MFG Direct $ AC",        "Nonrecurring Direct Manufacturing Labor Dollars Incurred At Completion",            "N/A", "Line 11, Column D",        "Dollars",            "At Completion",              "Nonrecurring",            "Manufacturing",        "Direct Manufacturing Labor",
-              "AY",     "Rec MFG Direct $ AC",           "Recurring Direct Manufacturing Labor Dollars Incurred At Completion",            "N/A", "Line 11, Column E",        "Dollars",            "At Completion",                 "Recurring",            "Manufacturing",        "Direct Manufacturing Labor",
-              "AZ",      "NR MFG Ops OH $ TD",       "Nonrecurring Manufacturing Operations Overhead Dollars Incurred To Date",            "N/A", "Line 12, Column A",        "Dollars",                  "To Date",              "Nonrecurring", "Manufacturing Operations", "Manufacturing Operations Overhead",
-              "BA",     "Rec MFG Ops OH $ TD",          "Recurring Manufacturing Operations Overhead Dollars Incurred To Date",            "N/A", "Line 12, Column B",        "Dollars",                  "To Date",                 "Recurring", "Manufacturing Operations", "Manufacturing Operations Overhead",
-              "BB",      "NR MFG Ops OH $ AC", "Nonrecurring Manufacturing Operations Overhead Dollars Incurred At Completion",            "N/A", "Line 12, Column D",        "Dollars",            "At Completion",              "Nonrecurring", "Manufacturing Operations", "Manufacturing Operations Overhead",
-              "BC",     "Rec MFG Ops OH $ AC",    "Recurring Manufacturing Operations Overhead Dollars Incurred At Completion",            "N/A", "Line 12, Column E",        "Dollars",            "At Completion",                 "Recurring", "Manufacturing Operations", "Manufacturing Operations Overhead",
-              "BD",         "NR Raw Mat $ TD",                            "Nonrecurring Raw Material Dollars Incurred To Date",            "N/A", "Line 14, Column A",        "Dollars",                  "To Date",              "Nonrecurring",                 "Material",                      "Raw Material",
-              "BE",        "Rec Raw Mat $ TD",                               "Recurring Raw Material Dollars Incurred To Date",            "N/A", "Line 14, Column B",        "Dollars",                  "To Date",                 "Recurring",                 "Material",                      "Raw Material",
-              "BF",         "NR Raw Mat $ AC",                      "Nonrecurring Raw Material Dollars Incurred At Completion",            "N/A", "Line 14, Column D",        "Dollars",            "At Completion",              "Nonrecurring",                 "Material",                      "Raw Material",
-              "BG",        "Rec Raw Mat $ AC",                         "Recurring Raw Material Dollars Incurred At Completion",            "N/A", "Line 14, Column E",        "Dollars",            "At Completion",                 "Recurring",                 "Material",                      "Raw Material",
-              "BH",     "NR Purch Parts $ TD",                         "Nonrecurring Purchased Parts Dollars Incurred To Date",            "N/A", "Line 15, Column A",        "Dollars",                  "To Date",              "Nonrecurring",                 "Material",                   "Purchased Parts",
-              "BI",    "Rec Purch Parts $ TD",                            "Recurring Purchased Parts Dollars Incurred To Date",            "N/A", "Line 15, Column B",        "Dollars",                  "To Date",                 "Recurring",                 "Material",                   "Purchased Parts",
-              "BJ",     "NR Purch Parts $ AC",                   "Nonrecurring Purchased Parts Dollars Incurred At Completion",            "N/A", "Line 15, Column D",        "Dollars",            "At Completion",              "Nonrecurring",                 "Material",                   "Purchased Parts",
-              "BK",    "Rec Purch Parts $ AC",                      "Recurring Purchased Parts Dollars Incurred At Completion",            "N/A", "Line 15, Column E",        "Dollars",            "At Completion",                 "Recurring",                 "Material",                   "Purchased Parts",
-              "BL",     "NR Purch Equip $ TD",                     "Nonrecurring Purchased Equipment Dollars Incurred To Date",            "N/A", "Line 16, Column A",        "Dollars",                  "To Date",              "Nonrecurring",                 "Material",               "Purchased Equipment",
-              "BM",    "Rec Purch Equip $ TD",                        "Recurring Purchased Equipment Dollars Incurred To Date",            "N/A", "Line 16, Column B",        "Dollars",                  "To Date",                 "Recurring",                 "Material",               "Purchased Equipment",
-              "BN",     "NR Purch Equip $ AC",               "Nonrecurring Purchased Equipment Dollars Incurred At Completion",            "N/A", "Line 16, Column D",        "Dollars",            "At Completion",              "Nonrecurring",                 "Material",               "Purchased Equipment",
-              "BO",    "Rec Purch Equip $ AC",                  "Recurring Purchased Equipment Dollars Incurred At Completion",            "N/A", "Line 16, Column E",        "Dollars",            "At Completion",                 "Recurring",                 "Material",               "Purchased Equipment",
-              "BP",          "NR Mat OH $ TD",              "Nonrecurring Material Handling/Overhead Dollars Incurred To Date",            "N/A", "Line 17, Column A",        "Dollars",                  "To Date",              "Nonrecurring",                 "Material",        "Material Handling/Overhead",
-              "BQ",         "Rec Mat OH $ TD",                 "Recurring Material Handling/Overhead Dollars Incurred To Date",            "N/A", "Line 17, Column B",        "Dollars",                  "To Date",                 "Recurring",                 "Material",        "Material Handling/Overhead",
-              "BR",          "NR Mat OH $ AC",        "Nonrecurring Material Handling/Overhead Dollars Incurred At Completion",            "N/A", "Line 17, Column D",        "Dollars",            "At Completion",              "Nonrecurring",                 "Material",        "Material Handling/Overhead",
-              "BS",         "Rec Mat OH $ AC",           "Recurring Material Handling/Overhead Dollars Incurred At Completion",            "N/A", "Line 17, Column E",        "Dollars",            "At Completion",                 "Recurring",                 "Material",        "Material Handling/Overhead",
-              "BT",  "NR Direct Rep Sub $ TD",          "Nonrecurring Direct-Reporting Subcontractor Dollars Incurred To Date",            "N/A", "Line 18, Column A",        "Dollars",                  "To Date",              "Nonrecurring",                 "Material",    "Direct-Reporting Subcontractor",
-              "BU", "Rec Direct Rep Sub $ TD",             "Recurring Direct-Reporting Subcontractor Dollars Incurred To Date",            "N/A", "Line 18, Column B",        "Dollars",                  "To Date",                 "Recurring",                 "Material",    "Direct-Reporting Subcontractor",
-              "BV",  "NR Direct Rep Sub $ AC",    "Nonrecurring Direct-Reporting Subcontractor Dollars Incurred At Completion",            "N/A", "Line 18, Column D",        "Dollars",            "At Completion",              "Nonrecurring",                 "Material",    "Direct-Reporting Subcontractor",
-              "BW", "Rec Direct Rep Sub $ AC",       "Recurring Direct-Reporting Subcontractor Dollars Incurred At Completion",            "N/A", "Line 18, Column E",        "Dollars",            "At Completion",                 "Recurring",                 "Material",    "Direct-Reporting Subcontractor",
-              "BX",           "NR Other $ TD",                 "Nonrecurring Other Costs Not Shown Elsewhere Incurred To Date",            "N/A", "Line 20, Column A",        "Dollars",                  "To Date",              "Nonrecurring",                    "Other",   "Other Costs Not Shown Elsewhere",
-              "BY",          "Rec Other $ TD",                    "Recurring Other Costs Not Shown Elsewhere Incurred To Date",            "N/A", "Line 20, Column B",        "Dollars",                  "To Date",                 "Recurring",                    "Other",   "Other Costs Not Shown Elsewhere",
-              "BZ",           "NR Other $ AC",           "Nonrecurring Other Costs Not Shown Elsewhere Incurred At Completion",            "N/A", "Line 20, Column D",        "Dollars",            "At Completion",              "Nonrecurring",                    "Other",   "Other Costs Not Shown Elsewhere",
-              "CA",          "Rec Other $ AC",              "Recurring Other Costs Not Shown Elsewhere Incurred At Completion",            "N/A", "Line 20, Column E",        "Dollars",            "At Completion",                 "Recurring",                    "Other",   "Other Costs Not Shown Elsewhere",
-              "CB",                 "Remarks",                                                                       "Remarks",            "N/A",           "Item 22",            "N/A",                      "N/A",                       "N/A",                      "N/A",                               "N/A"
-    ) %>% dplyr::mutate_all(stringr::str_replace_all, "N/A", NA_character_) %>% 
-    dplyr::rename(
-      ColumnLetter = `Column Letter`,
-      ColumnLabel = `Column Label`,
-      FullName = `Full Name`,
-      CDSRLocation = `1921 Location`,
-      FCHRLocation = `1921-1 Location`,
-      UnitOfMeasure = `Unit of Measure`,
-      ToDate_AtCompletion = `To Date / \r\nAt Completion`,
-      Recurring_Nonrecurring = `Recurring / Nonrecurring`,
-      FunctionalCategory = `Functional Category`,
-      FunctionalElement = `Functional Element`
-    )
   
   flat_file$Data <-
     dplyr::left_join(flat_file$Data, flat_file$Definitions,
@@ -196,9 +84,8 @@ read_flat_file <- function(path){
   
   # MetaData
   
-  flat_file$MetaData <- submission %>% 
-    dplyr::filter(sheet == "Data",
-                  col %in% c(1, 2)) %>%
+  flat_file$MetaData <- submission %>% dplyr::filter(sheet == "Data",
+                               col %in% c(1, 2)) %>%
     unpivotr::behead(direction = "W", name = "Field") %>%
     dplyr::select(col,
                   data_type,
@@ -208,66 +95,71 @@ read_flat_file <- function(path){
                   date,
                   character,
                   Field) %>%
-    unpivotr::spatter(Field) %>%
+    unpivotr::spatter(Field)
+  
+  flat_file$MetaData <- flat_file$MetaData %>%
     dplyr::select(-col,
                   -error,
                   -logical
     ) %>% 
     dplyr::mutate(
-      `Data Type` = as.character(`Data Type`),
-      `Data Version` = as.character(`Data Version`),
-      `Security Classification` = as.character(`Security Classification`),
-      `1a Program Name` = as.character(`1a Program Name`),
-      `1b Program Phase/Milestone` = as.character(`1b Program Phase/Milestone`),
-      `2 Prime Mission Product` = as.character(`2 Prime Mission Product`),
-      `3 Reporting Organization Type` = as.character(`3 Reporting Organization Type`),
-      `4a Organization Address City` = as.character(`4a Organization Address City`),
-      `4a Organization Address Line 1` = as.character(`4a Organization Address Line 1`),
-      `4a Organization Address Line 2` = as.character(`4a Organization Address Line 2`),
-      `4a Organization Address State` = as.character(`4a Organization Address State`),
-      `4a Organization Address Zip` = as.character(`4a Organization Address Zip`),
-      `4a Organization Name` = as.character(`4a Organization Name`),
-      `4b Division Address City` = as.character(`4b Division Address City`),
-      `4b Division Address Line 1` = as.character(`4b Division Address Line 1`),
-      `4b Division Address Line 2` = as.character(`4b Division Address Line 2`),
-      `4b Division Address State` = as.character(`4b Division Address State`),
-      `4b Division Address Zip` = as.character(`4b Division Address Zip`),
-      `4b Division Name` = as.character(`4b Division Name`),
-      `5 Approved Plan Number` = as.character(`5 Approved Plan Number`),
-      `6 Customer` = as.character(`6 Customer`),
-      `7 Contract Type` = as.character(`7 Contract Type`),
-      `8 Contract Price` = as.numeric(`8 Contract Price`),
-      `9 Contract Ceiling` = as.numeric(`9 Contract Ceiling`),
-      `10a Contract No` = as.character(`10a Contract No`),
-      `10b Latest Modification` = as.character(`10b Latest Modification`),
-      `10c Solicitation No` = as.character(`10c Solicitation No`),
-      `10d Name` = as.character(`10d Name`),
-      `10e Order/Lot No` = as.character(`10e Order/Lot No`),
-      `11a PoP Start Date` =  lubridate::ymd(`11a PoP Start Date`),
-      `11b PoP End Date` = lubridate::ymd(`11b PoP End Date`),
-      `12 Appropriation` = as.character(`12 Appropriation`),
-      `13 Report Cycle` = as.character(`13 Report Cycle`),
-      `14 Submission Number` = as.integer(`14 Submission Number`),
-      `15 Resubmission Number` = as.integer(`15 Resubmission Number`),
-      `16 Report As Of` = lubridate::ymd(`16 Report As Of`),
-      `17 Name` = as.character(`17 Name`),
-      `18 Department` = as.character(`18 Department`),
-      `19 Telephone Number` = as.character(`19 Telephone Number`),
-      `20 Email Address` = as.character(`20 Email Address`),
-      `21 Date Prepared` = lubridate::ymd(`21 Date Prepared`),
-      `Subtotal TD` = as.numeric(`Subtotal TD`),
-      `Subtotal AC` = as.numeric(`Subtotal AC`),
-      `G&A TD` = as.numeric(`G&A TD`),
-      `G&A AC` = as.numeric(`G&A AC`),
-      `UB AC` = as.numeric(`UB AC`),
-      `MR AC` = as.numeric(`MR AC`),
-      `FCCM TD` = as.numeric(`FCCM TD`),
-      `FCCM AC` = as.numeric(`FCCM AC`),
-      `Fee TD` = as.numeric(`Fee TD`),
-      `Fee AC` = as.numeric(`Fee AC`),
-      `Price TD` = as.numeric(`Price TD`),
-      `Price AC` = as.numeric(`Price AC`),
-      `DD 1921 Remarks` = as.character(`DD 1921 Remarks`)
+      `Data Type` = as.character(`Data Type`))
+  
+  flat_file$MetaData <- flat_file$MetaData %>%
+    mutate(
+      `Data Version` = if (exists("Data Version", where = flat_file$MetaData)) `Data Version` else NA_character_,
+      `Security Classification` = if (exists("Security Classification", where = flat_file$MetaData)) `Security Classification` else NA_character_, 
+      `1a Program Name` = if (exists("1a Program Name", where = flat_file$MetaData)) `1a Program Name` else NA_character_,
+      `1b Program Phase/Milestone` = if (exists("1b Program Phase/Milestone", where = flat_file$MetaData)) `1b Program Phase/Milestone` else NA_character_,
+      `2 Prime Mission Product` = if (exists("2 Prime Mission Product", where = flat_file$MetaData)) `2 Prime Mission Product` else NA_character_,
+      `3 Reporting Organization Type` = if (exists("3 Reporting Organization Type", where = flat_file$MetaData)) `3 Reporting Organization Type` else NA_character_,
+      `4a Organization Address City` = if (exists("4a Organization Address City", where = flat_file$MetaData)) `4a Organization Address City` else NA_character_,
+      `4a Organization Address Line 1` = if (exists("4a Organization Address Line 1", where = flat_file$MetaData)) `4a Organization Address Line 1` else NA_character_,
+      `4a Organization Address Line 2` = if (exists("4a Organization Address Line 2", where = flat_file$MetaData)) `4a Organization Address Line 2` else NA_character_,
+      `4a Organization Address State` = if (exists("4a Organization Address State", where = flat_file$MetaData)) `4a Organization Address State` else NA_character_,
+      `4a Organization Address Zip` = if (exists("4a Organization Address Zip", where = flat_file$MetaData)) `4a Organization Address Zip` else NA_character_,
+      `4a Organization Name` = if (exists("4a Organization Name", where = flat_file$MetaData)) `4a Organization Name` else NA_character_,
+      `4b Division Address City` = if (exists("4b Division Address City", where = flat_file$MetaData)) `4b Division Address City` else NA_character_,
+      `4b Division Address Line 1` = if (exists("4b Division Address Line 1", where = flat_file$MetaData)) `4b Division Address Line 1` else NA_character_,
+      `4b Division Address Line 2` = if (exists("4b Division Address Line 2", where = flat_file$MetaData)) `4b Division Address Line 2` else NA_character_,
+      `4b Division Address State` = if (exists("4b Division Address State", where = flat_file$MetaData)) `4b Division Address State` else NA_character_,
+      `4b Division Address Zip` = if (exists("4b Division Address Zip", where = flat_file$MetaData)) `4b Division Address Zip` else NA_character_,
+      `4b Division Name` = if (exists("4b Division Name", where = flat_file$MetaData)) `4b Division Name` else NA_character_,
+      `5 Approved Plan Number` = if (exists("5 Approved Plan Number", where = flat_file$MetaData)) `5 Approved Plan Number` else NA_character_,
+      `6 Customer` = if (exists("6 Customer", where = flat_file$MetaData)) `6 Customer` else NA_character_,
+      `7 Contract Type` = if (exists("7 Contract Type", where = flat_file$MetaData)) `7 Contract Type` else NA_character_,
+      `8 Contract Price` = if (exists("8 Contract Price", where = flat_file$MetaData)) `8 Contract Price` else NA_real_,
+      `9 Contract Ceiling` = if (exists("9 Contract Ceiling", where = flat_file$MetaData)) `9 Contract Ceiling` else NA_real_,
+      `10a Contract No` = if (exists("10a Contract No", where = flat_file$MetaData)) `10a Contract No` else NA_character_,
+      `10b Latest Modification` =  if (exists("10b Latest Modification", where = flat_file$MetaData)) `10b Latest Modification` else NA_character_,
+      `10c Solicitation No` = if (exists("10c Solicitation No", where = flat_file$MetaData)) `10c Solicitation No` else NA_character_,
+      `10d Name` = if (exists("10d Name", where = flat_file$MetaData)) `10d Name` else NA_character_,
+      `10e Order/Lot No` = if (exists("10e Order/Lot No", where = flat_file$MetaData)) `10e Order/Lot No` else NA_character_,
+      `11a PoP Start Date` =  if (exists("11a PoP Start Date", where = flat_file)) lubridate::ymd(`11a PoP Start Date`) else NA_real_,
+      `11b PoP End Date` = if (exists("11b PoP End Date", where = flat_file$MetaData)) lubridate::ymd(`11b PoP End Date`)else NA_real_,
+      `12 Appropriation` = if (exists("12 Appropriation", where = flat_file$MetaData)) `12 Appropriation` else NA_character_,
+      `13 Report Cycle` = if (exists("13 Report Cycle", where = flat_file$MetaData)) `13 Report Cycle` else NA_character_,
+      `14 Submission Number` = if (exists("14 Submission Number", where = flat_file$MetaData)) `14 Submission Number` else NA_real_,
+      `15 Resubmission Number` = if (exists("15 Resubmission Number", where = flat_file$MetaData)) `15 Resubmission Number` else NA_real_,
+      `16 Report As Of` = if (exists("16 Report As Of", where = flat_file$MetaData)) lubridate::ymd(`16 Report As Of`) else NA_real_,
+      `17 Name` = if (exists("17 Name", where = flat_file$MetaData)) `17 Name` else NA_character_,
+      `18 Department` = if (exists("18 Department", where = flat_file$MetaData)) `18 Department` else NA_character_,
+      `19 Telephone Number` = if (exists("19 Telephone Number", where = flat_file$MetaData)) `19 Telephone Number` else NA_character_,
+      `20 Email Address` = if (exists("20 Email Address", where = flat_file$MetaData)) `20 Email Address` else NA_character_,
+      `21 Date Prepared` = if (exists("21 Date Prepared", where = flat_file$MetaData)) lubridate::ymd(`21 Date Prepared`) else NA_real_,
+      `Subtotal TD` = if (exists("Subtotal TD", where = flat_file$MetaData)) `Subtotal TD` else NA_real_,
+      `Subtotal AC` = if (exists("Subtotal AC", where = flat_file$MetaData)) `Subtotal AC` else NA_real_,
+      `G&A TD` = if (exists("G&A TD", where = flat_file$MetaData)) `G&A TD` else NA_real_,
+      `G&A AC` = if (exists("G&A AC", where = flat_file$MetaData)) `G&A AC` else NA_real_,
+      `UB AC` = if (exists("UB AC", where = flat_file$MetaData)) `UB AC` else NA_real_,
+      `MR AC` = if (exists("MR AC", where = flat_file$MetaData)) `MR AC` else NA_real_,
+      `FCCM TD` = if (exists("FCCM TD", where = flat_file$MetaData)) `FCCM TD` else NA_real_,
+      `FCCM AC` = if (exists("FCCM AC", where = flat_file$MetaData)) `FCCM AC` else NA_real_,
+      `Fee TD` = if (exists("Fee TD", where = flat_file$MetaData)) `Fee TD` else NA_real_,
+      `Fee AC` = if (exists("Fee AC", where = flat_file$MetaData)) `Fee AC` else NA_real_,
+      `Price TD` = if (exists("Price TD", where = flat_file$MetaData)) `Price TD` else NA_real_,
+      `Price AC` = if (exists("Price AC", where = flat_file$MetaData)) `Price AC` else NA_real_,
+      `DD 1921 Remarks` = if (exists("DD 1921 Remarks", where = flat_file$MetaData)) `DD 1921 Remarks` else NA_character_
     ) %>% 
     dplyr::select(
       `Data Type`,
@@ -325,7 +217,8 @@ read_flat_file <- function(path){
       `Price AC`,
       `DD 1921 Remarks`
     )
-  
+
   return(flat_file)
-  
+  }
+
 }
