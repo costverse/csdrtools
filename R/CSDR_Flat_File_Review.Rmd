@@ -1,0 +1,1524 @@
+---
+title: "CSDR Flat File Review"
+output: 
+  html_notebook: 
+    toc: yes
+    number_sections: yes
+editor_options: 
+  chunk_output_type: console
+chunk_output_type: console
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+
+source(here::here("R", "read_flat_file.R"))
+source(here::here("R", "flat_file_class.R"))
+#foo <- read_flat_file(here::here("inst", "extdata", "Flat_File.xlsx"))
+
+foo <- read_flat_file(here::here("inst", "extdata", "Flat_File_mostly_blank.xlsx"))
+
+subtotal_FullNames <- c(
+ "Number of Units To Date",   
+ "Nonrecurring Costs Incurred To Date",   
+ "Recurring Costs Incurred To Date",   
+ "Number of Units At Completion",   
+ "Nonrecurring Costs Incurred At Completion",   
+ "Recurring Costs Incurred At Completion")
+
+```
+
+# Units
+
+## To Date vs. At Completion
+```{r}
+foo$Data %>% 
+  dplyr::filter(UnitOfMeasure == "Units",
+         Recurring_Nonrecurring == "Recurring") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = ToDate_AtCompletion, 
+              values_fn = list(Value = sum),
+              values_fill = list(ToDate = 0, AtCompletion = 0)) %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = gt::md("Units To Date vs. At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+# Dollars
+
+## Recurring vs. Nonrecurring
+
+### To Date
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         ToDate_AtCompletion == "ToDate") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = Recurring_Nonrecurring, 
+              values_fn = list(Value = sum),
+              values_fill = list(Nonrecurring = 0, Recurring = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Nonrecurring, Recurring)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_currency(columns = gt::vars(
+    Nonrecurring, 
+    Recurring, 
+    Total
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring vs. Nonrecurring Dollars To Date")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         ToDate_AtCompletion == "AtCompletion") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = Recurring_Nonrecurring, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Nonrecurring, Recurring)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    Nonrecurring,
+    Recurring,
+    Total
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring vs. Nonrecurring Dollars At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+## To Date vs. At Completion
+
+### Total
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = ToDate_AtCompletion, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    ToDate, 
+    AtCompletion
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring & Recurring Dollars To Date vs. At Completion"))
+```
+
+#### Nonrecurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         Recurring_Nonrecurring == "Nonrecurring") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = ToDate_AtCompletion, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    ToDate, 
+    AtCompletion
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring Dollars To Date vs. At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Recurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         Recurring_Nonrecurring == "Recurring") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = ToDate_AtCompletion, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0))%>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    ToDate, 
+    AtCompletion
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Dollars To Date vs. At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+## By Functional Category
+
+### To Date
+
+#### Total
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         ToDate_AtCompletion == "ToDate") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_currency(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing, 
+    `Manufacturing Operations`, 
+    Material, 
+    Other, 
+    Total
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total Dollars To Date by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Nonrecurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         Recurring_Nonrecurring == "Nonrecurring",
+         ToDate_AtCompletion == "ToDate") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing, 
+    `Manufacturing Operations`, 
+    Material, 
+    Other, 
+    Total
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring Dollars To Date by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Recurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         Recurring_Nonrecurring == "Recurring",
+         ToDate_AtCompletion == "ToDate") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing, 
+    `Manufacturing Operations`, 
+    Material, 
+    Other, 
+    Total
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Dollars To Date by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+
+#### Total
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         ToDate_AtCompletion == "AtCompletion") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing, 
+    `Manufacturing Operations`, 
+    Material, 
+    Other, 
+    Total
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Dollars At Completion by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Nonrecurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         Recurring_Nonrecurring == "Nonrecurring",
+         ToDate_AtCompletion == "AtCompletion") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing, 
+    `Manufacturing Operations`, 
+    Material, 
+    Other, 
+    Total
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring Dollars At Completion by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Recurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         Recurring_Nonrecurring == "Recurring",
+         ToDate_AtCompletion == "AtCompletion") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing, 
+    `Manufacturing Operations`, 
+    Material, 
+    Other, 
+    Total
+    ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Dollars At Completion by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+## By Functional Element
+
+### To Date
+
+#### Total
+
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         ToDate_AtCompletion == "ToDate") %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`,
+    Total
+  ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total Dollars To Date by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+
+#### Nonrecurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         Recurring_Nonrecurring == "Nonrecurring",
+         ToDate_AtCompletion == "ToDate",
+  ) %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`,
+    Total
+  ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring Dollars To Date by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Recurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         Recurring_Nonrecurring == "Recurring",
+         ToDate_AtCompletion == "ToDate",
+  ) %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`,
+    Total
+  ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Dollars To Date by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+
+#### Total
+
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         ToDate_AtCompletion == "AtCompletion") %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`,
+    Total
+  ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total Dollars At Completion by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Nonrecurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         Recurring_Nonrecurring == "Nonrecurring",
+         ToDate_AtCompletion == "AtCompletion",
+  ) %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`,
+    Total
+  ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring Dollars At Completion by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Recurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Dollars",
+         Recurring_Nonrecurring == "Recurring",
+         ToDate_AtCompletion == "AtCompletion",
+  ) %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  fmt_currency(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Engineering Overhead`,
+    `Direct Tooling Labor`,
+    `Direct Tooling & Equipment`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`,
+    `Manufacturing Operations Overhead`,
+    `Raw Material`,
+    `Purchased Parts`,
+    `Purchased Equipment`,
+    `Material Handling/Overhead`,
+    `Direct-Reporting Subcontractor`,
+    `Other Costs Not Shown Elsewhere`,
+    Total
+  ), suffixing = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Dollars At Completion by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+# Hours
+
+## Recurring vs. Nonrecurring
+
+### To Date
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         ToDate_AtCompletion == "ToDate") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = Recurring_Nonrecurring, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Nonrecurring, Recurring)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    Nonrecurring, 
+    Recurring, 
+    Total
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring vs. Nonrecurring Hours To Date")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         ToDate_AtCompletion == "AtCompletion") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = Recurring_Nonrecurring, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Nonrecurring, Recurring)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    Nonrecurring, 
+    Recurring, 
+    Total
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring vs. Nonrecurring Hours At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+## To Date vs. At Completion
+
+### Total
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = ToDate_AtCompletion, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    ToDate, 
+    AtCompletion
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total Hours To Date vs. At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### Nonrecurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         Recurring_Nonrecurring == "Nonrecurring") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = ToDate_AtCompletion, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    ToDate, 
+    AtCompletion
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring Hours To Date vs. At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### Recurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         Recurring_Nonrecurring == "Recurring") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = ToDate_AtCompletion, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    ToDate, 
+    AtCompletion
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Hours To Date vs. At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+## By Functional Category
+
+### To Date
+
+#### Total
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         ToDate_AtCompletion == "ToDate") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total Hours To Date by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Nonrecurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         Recurring_Nonrecurring == "Nonrecurring",
+         ToDate_AtCompletion == "ToDate") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring Hours To Date by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Recurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         Recurring_Nonrecurring == "Recurring",
+         ToDate_AtCompletion == "ToDate") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Hours To Date by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+
+#### Total
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         ToDate_AtCompletion == "AtCompletion") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total Hours At Completion by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+
+#### Nonrecurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         Recurring_Nonrecurring == "Nonrecurring",
+         ToDate_AtCompletion == "AtCompletion") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring Hours At Completion by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Recurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         Recurring_Nonrecurring == "Recurring",
+         ToDate_AtCompletion == "AtCompletion") %>%
+  dplyr::select(-FunctionalElement) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalCategory, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    Engineering, 
+    Tooling, 
+    `Quality Control`, 
+    Manufacturing
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Hours At Completion by Functional Category")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+## By Functional Element
+
+### To Date
+
+#### Total
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         ToDate_AtCompletion == "ToDate") %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total Hours To Date by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Nonrecurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         Recurring_Nonrecurring == "Nonrecurring",
+         ToDate_AtCompletion == "ToDate") %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring Hours To Date by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+#### Recurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         Recurring_Nonrecurring == "Recurring",
+         ToDate_AtCompletion == "ToDate") %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Hours To Date by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+
+#### Total
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         ToDate_AtCompletion == "AtCompletion") %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total Hours At Completion by Functional Element"))
+```
+
+#### Nonrecurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         Recurring_Nonrecurring == "Nonrecurring",
+         ToDate_AtCompletion == "AtCompletion") %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0
+              )) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+  )) %>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring Hours At Completion by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+#### Recurring
+```{r}
+foo$Data %>% 
+  dplyr::filter(!(FullName %in% subtotal_FullNames),
+         UnitOfMeasure == "Hours",
+         Recurring_Nonrecurring == "Recurring",
+         ToDate_AtCompletion == "AtCompletion") %>%
+  dplyr::select(-FunctionalCategory) %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
+              values_from = Value, 
+              names_from = FunctionalElement, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
+  dplyr::group_by(WBSElementID) %>% 
+  mutate(Total = sum(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+  ))%>% 
+  ungroup() %>% 
+  gt::gt() %>% 
+  gt::fmt_number(columns = gt::vars(
+    `Direct Engineering Labor`,
+    `Direct Tooling Labor`,
+    `Direct Quality Control Labor`,
+    `Direct Manufacturing Labor`
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring Hours At Completion by Functional Element")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+# Units, Hours, Dollars
+
+## Total 
+
+### To Date
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    ToDate_AtCompletion == "ToDate") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total To Date")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    ToDate_AtCompletion == "AtCompletion") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+## Nonrecurring 
+
+### To Date
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    Recurring_Nonrecurring == "Nonrecurring",
+    ToDate_AtCompletion == "ToDate") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring To Date")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    Recurring_Nonrecurring == "Nonrecurring",
+    ToDate_AtCompletion == "AtCompletion") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+## Recurring 
+
+### To Date
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    Recurring_Nonrecurring == "Recurring",
+    ToDate_AtCompletion == "ToDate") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring To Date")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    Recurring_Nonrecurring == "Recurring",
+    ToDate_AtCompletion == "AtCompletion") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+# Average Hours & Dollars by Unit
+
+## Total 
+
+### To Date
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    ToDate_AtCompletion == "ToDate") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  mutate(
+    Hours_Per_Unit = sum(Hours / Units, rm.na = TRUE),
+    Dollars_Per_Unit = sum(Dollars / Units, rm.na = TRUE)
+         ) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::tab_spanner(
+    label = "Hours", columns = vars(Hours, Hours_Per_Unit)) %>% 
+  gt::tab_spanner(
+    label = "Dollars", columns = vars(Dollars, Dollars_Per_Unit)) %>%
+    gt::cols_label(
+      Hours = "Total",
+      Dollars = "Total",
+      Hours_Per_Unit = "Per Unit",
+      Dollars_Per_Unit = "Per Unit"
+      ) %>% 
+  gt::fmt_currency(columns = gt::vars(
+    Dollars,
+    Dollars_Per_Unit
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours,
+    Hours_Per_Unit
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total To Date")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    ToDate_AtCompletion == "AtCompletion") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Total At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+## Nonrecurring 
+
+### To Date
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    Recurring_Nonrecurring == "Nonrecurring",
+    ToDate_AtCompletion == "ToDate") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring To Date")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    Recurring_Nonrecurring == "Nonrecurring",
+    ToDate_AtCompletion == "AtCompletion") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Nonrecurring At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+## Recurring 
+
+### To Date
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    Recurring_Nonrecurring == "Recurring",
+    ToDate_AtCompletion == "ToDate") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring To Date")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
+
+### At Completion
+```{r}
+foo$Data %>% 
+  dplyr::filter(
+    Recurring_Nonrecurring == "Recurring",
+    ToDate_AtCompletion == "AtCompletion") %>% 
+  tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
+              values_from = Value, 
+              names_from = UnitOfMeasure, 
+              values_fn = list(Value = sum),
+              values_fill = list(Value = 0)) %>%
+  dplyr::group_by(WBSElementID) %>% 
+  dplyr::select(WBSElementID,
+         WBSElementName,
+         Units, Hours, Dollars) %>% 
+  ungroup() %>% 
+  gt::gt() %>%
+  gt::fmt_currency(columns = gt::vars(
+    Dollars
+  ), suffixing = TRUE) %>% 
+  gt::fmt_number(columns = gt::vars(
+    Units,
+    Hours
+    ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
+  gt::tab_header(title = gt::md("Recurring At Completion")) %>% 
+  gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
+```
