@@ -1358,8 +1358,8 @@ foo$Data %>%
   gt::tab_spanner(
     label = "Dollars", columns = vars(Dollars, Dollars_Per_Unit)) %>%
     gt::cols_label(
-      Hours = "Total",
-      Dollars = "Total",
+      Hours = "Sum",
+      Dollars = "Sum",
       Hours_Per_Unit = "Per Unit",
       Dollars_Per_Unit = "Per Unit"
       ) %>% 
@@ -1390,14 +1390,30 @@ foo$Data %>%
   dplyr::select(WBSElementID,
          WBSElementName,
          Units, Hours, Dollars) %>% 
+  mutate(
+    Hours_Per_Unit = sum(Hours / Units, rm.na = TRUE),
+    Dollars_Per_Unit = sum(Dollars / Units, rm.na = TRUE)
+         ) %>% 
   ungroup() %>% 
   gt::gt() %>%
+  gt::tab_spanner(
+    label = "Hours", columns = vars(Hours, Hours_Per_Unit)) %>% 
+  gt::tab_spanner(
+    label = "Dollars", columns = vars(Dollars, Dollars_Per_Unit)) %>%
+    gt::cols_label(
+      Hours = "Sum",
+      Dollars = "Sum",
+      Hours_Per_Unit = "Per Unit",
+      Dollars_Per_Unit = "Per Unit"
+      ) %>% 
   gt::fmt_currency(columns = gt::vars(
-    Dollars
+    Dollars,
+    Dollars_Per_Unit
   ), suffixing = TRUE) %>% 
   gt::fmt_number(columns = gt::vars(
     Units,
-    Hours
+    Hours,
+    Hours_Per_Unit
     ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
   gt::tab_header(title = gt::md("Total At Completion")) %>% 
   gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
@@ -1419,19 +1435,31 @@ foo$Data %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
          WBSElementName,
-         Units, Hours, Dollars) %>%
-  dplyr::group_by(WBSElementID) %>% 
-  dplyr::select(WBSElementID,
-         WBSElementName,
          Units, Hours, Dollars) %>% 
+  mutate(
+    Hours_Per_Unit = sum(Hours / Units, rm.na = TRUE),
+    Dollars_Per_Unit = sum(Dollars / Units, rm.na = TRUE)
+         ) %>% 
   ungroup() %>% 
   gt::gt() %>%
+  gt::tab_spanner(
+    label = "Hours", columns = vars(Hours, Hours_Per_Unit)) %>% 
+  gt::tab_spanner(
+    label = "Dollars", columns = vars(Dollars, Dollars_Per_Unit)) %>%
+    gt::cols_label(
+      Hours = "Sum",
+      Dollars = "Sum",
+      Hours_Per_Unit = "Per Unit",
+      Dollars_Per_Unit = "Per Unit"
+      ) %>% 
   gt::fmt_currency(columns = gt::vars(
-    Dollars
+    Dollars,
+    Dollars_Per_Unit
   ), suffixing = TRUE) %>% 
   gt::fmt_number(columns = gt::vars(
     Units,
-    Hours
+    Hours,
+    Hours_Per_Unit
     ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
   gt::tab_header(title = gt::md("Nonrecurring To Date")) %>% 
   gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
@@ -1452,14 +1480,30 @@ foo$Data %>%
   dplyr::select(WBSElementID,
          WBSElementName,
          Units, Hours, Dollars) %>% 
+  mutate(
+    Hours_Per_Unit = sum(Hours / Units, rm.na = TRUE),
+    Dollars_Per_Unit = sum(Dollars / Units, rm.na = TRUE)
+         ) %>% 
   ungroup() %>% 
   gt::gt() %>%
+  gt::tab_spanner(
+    label = "Hours", columns = vars(Hours, Hours_Per_Unit)) %>% 
+  gt::tab_spanner(
+    label = "Dollars", columns = vars(Dollars, Dollars_Per_Unit)) %>%
+    gt::cols_label(
+      Hours = "Sum",
+      Dollars = "Sum",
+      Hours_Per_Unit = "Per Unit",
+      Dollars_Per_Unit = "Per Unit"
+      ) %>% 
   gt::fmt_currency(columns = gt::vars(
-    Dollars
+    Dollars,
+    Dollars_Per_Unit
   ), suffixing = TRUE) %>% 
   gt::fmt_number(columns = gt::vars(
     Units,
-    Hours
+    Hours,
+    Hours_Per_Unit
     ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
   gt::tab_header(title = gt::md("Nonrecurring At Completion")) %>% 
   gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
@@ -1482,14 +1526,30 @@ foo$Data %>%
   dplyr::select(WBSElementID,
          WBSElementName,
          Units, Hours, Dollars) %>% 
+  mutate(
+    Hours_Per_Unit = sum(Hours / Units, rm.na = TRUE),
+    Dollars_Per_Unit = sum(Dollars / Units, rm.na = TRUE)
+         ) %>% 
   ungroup() %>% 
   gt::gt() %>%
+  gt::tab_spanner(
+    label = "Hours", columns = vars(Hours, Hours_Per_Unit)) %>% 
+  gt::tab_spanner(
+    label = "Dollars", columns = vars(Dollars, Dollars_Per_Unit)) %>%
+    gt::cols_label(
+      Hours = "Sum",
+      Dollars = "Sum",
+      Hours_Per_Unit = "Per Unit",
+      Dollars_Per_Unit = "Per Unit"
+      ) %>% 
   gt::fmt_currency(columns = gt::vars(
-    Dollars
+    Dollars,
+    Dollars_Per_Unit
   ), suffixing = TRUE) %>% 
   gt::fmt_number(columns = gt::vars(
     Units,
-    Hours
+    Hours,
+    Hours_Per_Unit
     ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
   gt::tab_header(title = gt::md("Recurring To Date")) %>% 
   gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
@@ -1510,14 +1570,30 @@ foo$Data %>%
   dplyr::select(WBSElementID,
          WBSElementName,
          Units, Hours, Dollars) %>% 
+  mutate(
+    Hours_Per_Unit = sum(Hours / Units, rm.na = TRUE),
+    Dollars_Per_Unit = sum(Dollars / Units, rm.na = TRUE)
+         ) %>% 
   ungroup() %>% 
   gt::gt() %>%
+  gt::tab_spanner(
+    label = "Hours", columns = vars(Hours, Hours_Per_Unit)) %>% 
+  gt::tab_spanner(
+    label = "Dollars", columns = vars(Dollars, Dollars_Per_Unit)) %>%
+    gt::cols_label(
+      Hours = "Sum",
+      Dollars = "Sum",
+      Hours_Per_Unit = "Per Unit",
+      Dollars_Per_Unit = "Per Unit"
+      ) %>% 
   gt::fmt_currency(columns = gt::vars(
-    Dollars
+    Dollars,
+    Dollars_Per_Unit
   ), suffixing = TRUE) %>% 
   gt::fmt_number(columns = gt::vars(
     Units,
-    Hours
+    Hours,
+    Hours_Per_Unit
     ), suffixing = TRUE, decimals = 1, drop_trailing_zeros = TRUE) %>% 
   gt::tab_header(title = gt::md("Recurring At Completion")) %>% 
   gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
