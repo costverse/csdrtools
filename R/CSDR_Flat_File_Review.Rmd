@@ -39,9 +39,9 @@ foo$Data %>%
          Recurring_Nonrecurring == "Recurring") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = ToDate_AtCompletion, 
-              values_fn = list(Value = sum),
-              values_fill = list(ToDate = 0, AtCompletion = 0)) %>% 
+              names_from  = ToDate_AtCompletion, 
+              values_fn   = list(Value = sum),
+              values_fill = list(Value = sum)) %>% 
   gt::gt() %>% 
   gt::tab_header(title = gt::md("Units To Date vs. At Completion")) %>% 
   gt::cols_align(align = "left", columns = gt::vars(WBSElementID, WBSElementName))
@@ -59,9 +59,9 @@ foo$Data %>%
          ToDate_AtCompletion == "ToDate") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = Recurring_Nonrecurring, 
-              values_fn = list(Value = sum),
-              values_fill = list(Nonrecurring = 0, Recurring = 0)) %>%
+              names_from  = Recurring_Nonrecurring, 
+              values_fn   = list(Value = sum),
+              values_fill = list(Value = sum)) %>%
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Nonrecurring, Recurring)) %>% 
   ungroup() %>% 
@@ -83,8 +83,8 @@ foo$Data %>%
          ToDate_AtCompletion == "AtCompletion") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = Recurring_Nonrecurring, 
-              values_fn = list(Value = sum),
+              names_from  = Recurring_Nonrecurring, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Nonrecurring, Recurring)) %>% 
@@ -108,8 +108,8 @@ foo$Data %>%
          UnitOfMeasure == "Dollars") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = ToDate_AtCompletion, 
-              values_fn = list(Value = sum),
+              names_from  = ToDate_AtCompletion, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   gt::gt() %>% 
   fmt_currency(columns = gt::vars(
@@ -127,8 +127,8 @@ foo$Data %>%
          Recurring_Nonrecurring == "Nonrecurring") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = ToDate_AtCompletion, 
-              values_fn = list(Value = sum),
+              names_from  = ToDate_AtCompletion, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   gt::gt() %>% 
   fmt_currency(columns = gt::vars(
@@ -147,9 +147,9 @@ foo$Data %>%
          Recurring_Nonrecurring == "Recurring") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = ToDate_AtCompletion, 
-              values_fn = list(Value = sum),
-              values_fill = list(Value = 0))%>% 
+              names_from  = ToDate_AtCompletion, 
+              values_fn   = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
   gt::gt() %>% 
   fmt_currency(columns = gt::vars(
     ToDate, 
@@ -172,8 +172,8 @@ foo$Data %>%
   dplyr::select(-FunctionalElement) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalCategory, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
@@ -203,8 +203,8 @@ foo$Data %>%
   dplyr::select(-FunctionalElement) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalCategory, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
@@ -234,8 +234,8 @@ foo$Data %>%
   dplyr::select(-FunctionalElement) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalCategory, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
@@ -266,8 +266,8 @@ foo$Data %>%
   dplyr::select(-FunctionalElement) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalCategory, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
@@ -297,8 +297,8 @@ foo$Data %>%
   dplyr::select(-FunctionalElement) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalCategory, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
@@ -328,8 +328,8 @@ foo$Data %>%
   dplyr::select(-FunctionalElement) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalCategory, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing, `Manufacturing Operations`, Material, Other)) %>% 
@@ -363,8 +363,8 @@ foo$Data %>%
   dplyr::select(-FunctionalCategory) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalElement, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -417,8 +417,8 @@ foo$Data %>%
   dplyr::select(-FunctionalCategory) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalElement, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -470,8 +470,8 @@ foo$Data %>%
   dplyr::select(-FunctionalCategory) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalElement, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -524,8 +524,8 @@ foo$Data %>%
   dplyr::select(-FunctionalCategory) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalElement, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -577,8 +577,8 @@ foo$Data %>%
   dplyr::select(-FunctionalCategory) %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
-              names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              names_from  = FunctionalElement, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -631,7 +631,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -685,7 +685,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = Recurring_Nonrecurring, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Nonrecurring, Recurring)) %>% 
@@ -709,7 +709,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = Recurring_Nonrecurring, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Nonrecurring, Recurring)) %>% 
@@ -734,7 +734,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = ToDate_AtCompletion, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   gt::gt() %>% 
   gt::fmt_number(columns = gt::vars(
@@ -754,7 +754,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = ToDate_AtCompletion, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   gt::gt() %>% 
   gt::fmt_number(columns = gt::vars(
@@ -774,7 +774,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = ToDate_AtCompletion, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   gt::gt() %>% 
   gt::fmt_number(columns = gt::vars(
@@ -799,7 +799,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
@@ -826,7 +826,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
@@ -853,7 +853,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
@@ -881,7 +881,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
@@ -909,7 +909,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
@@ -936,7 +936,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalCategory, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(Engineering, Tooling, `Quality Control`, Manufacturing)) %>% 
@@ -966,7 +966,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -999,7 +999,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -1031,7 +1031,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -1065,7 +1065,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -1097,7 +1097,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0
               )) %>% 
   dplyr::group_by(WBSElementID) %>% 
@@ -1130,7 +1130,7 @@ foo$Data %>%
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName, -WBSElementRemarks),
               values_from = Value, 
               names_from = FunctionalElement, 
-              values_fn = list(Value = sum),
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   dplyr::group_by(WBSElementID) %>% 
   mutate(Total = sum(
@@ -1162,8 +1162,8 @@ foo$Data %>%
     ToDate_AtCompletion == "ToDate") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1189,8 +1189,8 @@ foo$Data %>%
     ToDate_AtCompletion == "AtCompletion") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1219,8 +1219,8 @@ foo$Data %>%
     ToDate_AtCompletion == "ToDate") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1251,8 +1251,8 @@ foo$Data %>%
     ToDate_AtCompletion == "AtCompletion") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1281,8 +1281,8 @@ foo$Data %>%
     ToDate_AtCompletion == "ToDate") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1309,8 +1309,8 @@ foo$Data %>%
     ToDate_AtCompletion == "AtCompletion") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1340,8 +1340,8 @@ foo$Data %>%
     ToDate_AtCompletion == "ToDate") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1383,8 +1383,8 @@ foo$Data %>%
     ToDate_AtCompletion == "AtCompletion") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1429,8 +1429,8 @@ foo$Data %>%
     ToDate_AtCompletion == "ToDate") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1473,8 +1473,8 @@ foo$Data %>%
     ToDate_AtCompletion == "AtCompletion") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1519,8 +1519,8 @@ foo$Data %>%
     ToDate_AtCompletion == "ToDate") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
@@ -1563,8 +1563,8 @@ foo$Data %>%
     ToDate_AtCompletion == "AtCompletion") %>% 
   tidyr::pivot_wider(id_cols = c(WBSElementID, WBSElementName),
               values_from = Value, 
-              names_from = UnitOfMeasure, 
-              values_fn = list(Value = sum),
+              names_from  = UnitOfMeasure, 
+              values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>%
   dplyr::group_by(WBSElementID) %>% 
   dplyr::select(WBSElementID,
