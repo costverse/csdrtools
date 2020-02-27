@@ -1,0 +1,48 @@
+---
+title: "CSDR Submission Import And Review Checklist"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction & Overview
+
+# Reading Data Into R
+
+## Creating the CSDR Submission Flat File
+
+The following workflow utilizes the CSDR Flat File submission format.  If you already have a Flat File format submission, [you can skip a few steps](#read_flat_file).  If the submission was not in the Flat File format, it can be created utilizing [cPet desktop](https://cade.osd.mil/tools/csdr-tools) and the following files:  
+
+1. An XML copy of the CSDR Plan^[For instructions on how to find and download an XML copy of a CSDR Plan, [click here](#download_xml_csdr_plan).]
+1. An Excel copy of the CSDR DD Form 1921 submission.  
+1. An Excel copy of the CSDR DD Form 1921-1 submission.  
+
+Utilize the following directions to convert the Plan, 1921, and 1921-1 into the Flat File format:  
+ 
+1. Drag and drop the the XML CSDR Plan into cPet desktop.
+1. Right-click on the CSDR Plan icon, and select "Import DD 1921..." and point the selection box to the DD Form 1921 Excel submission.^[If there are critical errors identified during this step, the submitter may have to fix them and resubmit before you can continue.]
+1. After the DD Form 1921 has been imported to cPet, right-click the new DD Form 1921 icon and select "Import DD 1921-1..." and point the selection box to the DD Form 1921 Excel submission.^[If there are critical errors identified during this step, the submitter may have to fix them and resubmit before you can continue.]
+1. After the DD Form 1921-1 has been imported to cPet, right-click the new DD Form 1921-1 icon and select "Export Flat File (1921 & 1921-1)..." and save the file. 
+
+## Reading the CSDR Submission Flat File{#read_flat_file}
+
+## Reading the CSDR Dictionary 
+
+
+# Other How-To's
+
+## Downloading an XML Version of a CSDR Plan{#download_xml_csdr_plan}
+
+How do find and download an XML copy of a CSDR Plan.  
+
+1. Log into the secure "[CADE Portal](https://service.cade.osd.mil/cadeportal)".
+1. Select "[CSDR-SR](https://service.cade.osd.mil/csdrsr/)" from the "Applications" menu.
+1. Hover over "My CSDR" and then click "[Program Planning](https://service.cade.osd.mil/csdrsr/site/ProgramPlanning/ProgramPlanningModuleSearch.aspx)".
+1. Find the program of interest and click on its name.
+1. Click "Approved Documentation".
+1. Click on the applicable "Plan Number".
+1. Scroll down to the "Documents" section and find the row/area for the CSDR Plan(s) (normally this is the first section under "Documents").
+1. Find and click the icon that looks like a piece of paper with three lines (if you hover over it, you can confirm its name and that it ends in ".XML").
+1. Save the file to the location of your choosing.
