@@ -1,0 +1,701 @@
+---
+title: "CSDR Submission Import And Review Checklist"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r eval=FALSE, include=FALSE}
+# Start css style declarations 
+```
+
+<style type="text/css">
+.main-container {
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+
+```{r eval=FALSE, include=FALSE}
+# End css style declarations 
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# options(width = 115)
+
+options(tibble.print_max = Inf)
+
+library(magrittr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(wbstools)
+library(unpivotr)
+library(purrr)
+
+source(here::here("R", "flat_file_class.R"))
+source(here::here("R", "read_flat_file.R"))
+```
+
+# Introduction & Overview
+
+
+```{r}
+# TODO: Add the checklist from the pptx file into here and/or an intro to talk about what this is.
+```
+
+# Reading Data Into R
+
+## Creating the CSDR Submission Flat File
+
+The following workflow utilizes the CSDR Flat File submission format.  If you already have a Flat File format submission, [you can skip a few steps](#read_flat_file).  If the submission was not in the Flat File format, it can be created utilizing [cPet desktop](https://cade.osd.mil/tools/csdr-tools) and the following files:  
+
+1. An XML copy of the CSDR Plan^[For instructions on how to find and download an XML copy of a CSDR Plan, [click here](#download_xml_csdr_plan).]
+1. An Excel copy of the CSDR DD Form 1921 submission.  
+1. An Excel copy of the CSDR DD Form 1921-1 submission.  
+
+Utilize the following directions to convert the Plan, 1921, and 1921-1 into the Flat File format:  
+ 
+```{r}
+# TODO: Update this to provide better direction on what to do if there is a critical error.  Maybe include a screenshot of what that looks like.  Tell the user to 100% stop the review and send back to the submitter for correction before moving forward.
+```
+ 
+1. Drag and drop the the XML CSDR Plan into cPet desktop.
+1. Right-click on the CSDR Plan icon, and select "Import DD 1921..." and point the selection box to the DD Form 1921 Excel submission.^[If there are critical errors identified during this step, the submitter may have to fix them and resubmit before you can continue.]
+1. After the DD Form 1921 has been imported to cPet, right-click the new DD Form 1921 icon and select "Import DD 1921-1..." and point the selection box to the DD Form 1921 Excel submission.^[If there are critical errors identified during this step, the submitter may have to fix them and resubmit before you can continue.]
+1. After the DD Form 1921-1 has been imported to cPet, right-click the new DD Form 1921-1 icon and select "Export Flat File (1921 & 1921-1)..." and save the file. 
+1. cPet will export the file as a legacy (".xls") Excel file.  We need to convert the Flat File to Excel's new ".xlsx" file format to work with the rest of this code.  Open the cPet created file in Excel, click "File", "Save As", select the save location, click the "Save as type:" drop-down and select "Excel Workbook (*.xlsx)", click "Save".  
+
+## Reading the CSDR Submission Flat File{#read_flat_file}
+
+Provide the file name and path to the CSDR Flat File.  
+```{r}
+# Provide the filename (with extension) of the CSDR submission Flat File.
+flat_file_source_name <- "FILE_NAME.xlsx"
+
+# Provide the path to the CSDR submission Flat File (do not include the filename
+# or extension).
+flat_file_source_path <- here::here("data", "source")
+```
+
+Indicate if the file was reported in thousands of hours and/or dollars^[Legacy CSDR requirements directed that hours and dollars be reported in 'thousands']. 
+```{r}
+# Were hours reported in 'thousands of hours'?
+hours_in_k <- TRUE
+
+# Were dollars reported in 'thousands of dollars'?
+dollars_in_k <- TRUE
+```
+
+Read the CSDR Flat File into R, convert hours and dollars as necessary and perform other cleaning operations.  
+```{r}
+# Import the CSDR Flat File.  Keep an unmodified source copy in `ff_source`.
+ff_source <- read_flat_file(path =  paste0(flat_file_source_path, "/", flat_file_source_name))
+ff <- ff_source
+
+# Convert 'thousands of hours' to 'hours', if required.
+if (hours_in_k == TRUE) {
+  ff$Data <- ff$Data %>% 
+    mutate(Value = case_when(
+      UnitOfMeasure == "Hours" ~ Value * 1000,
+      TRUE ~ Value
+      ))
+}
+rm(hours_in_k)
+
+# Convert 'thousands of dollars' to 'dollars', if required.
+if (dollars_in_k == TRUE) {
+  ff$Data <- ff$Data %>% 
+    mutate(Value = case_when(
+      UnitOfMeasure == "Dollars" ~ Value * 1000,
+      TRUE                       ~ Value
+    ))
+}
+rm(dollars_in_k)
+
+# Convert WBSElementID into a `wbs` class object.
+
+# TODO: Need to modify read_flat_file() to import WBSElementID as a wbs (not fct) then we won't need to convert it back to char here.  Also have read_flat_file convert "1.0" to "1".
+ff$Data$WBSElementID <- as.character(ff$Data$WBSElementID)
+
+ff$Data <- ff$Data %>%
+  mutate(WBSElementID = case_when(
+    WBSElementID == "1.0" ~ "1",
+    TRUE ~ WBSElementID
+    ))
+
+ff$Data$WBSElementID <- as_wbs(ff$Data$WBSElementID)
+```
+
+### Clean Remarks (if required)
+
+If the submission includes remarks about hours or dollars being reported in 'thousands', it is a good idea to remove those remarks since that data as already been converted back to unit hours/dollars (otherwise we might forget later and then get confused when we see the remark).  This code likely needs to be reviewed and/or likely need to be tailored to work with each submission.
+```{r}
+#################### REVIEW THIS CODE FOR EACH SUBMISSION ####################
+# Remove the WBS Element remark(s) about hours or dollars being reported in
+# 'thousands' since that data has been replaced/cleaned.
+
+
+```
+
+## Reading the CSDR Dictionary 
+
+Provide the file name and path to the CSDR WBS Dictionary.  
+```{r}
+# Provide the filename (with extension) of the CSDR WBS Dictionary.
+dictionary_source_name <- "FILE_NAME.xlsx"
+
+# Provide the title of the worksheet the CSDR WBS Dictionary is found on.
+dictionary_worksheet_title <- "WORKSHEET_TITLE"
+
+# Provide the path to the CSDR WBS Dictionary (do not include the filename
+# or extension).
+dictionary_source_path <- here::here("data", "source")
+```
+
+```{r}
+# Import the CSDR WBS Dictionary.  Keep an unmodified copy in `dictionary_source`,
+dictionary_source <- tidyxl::xlsx_cells(path =  paste0(dictionary_source_path, "/", dictionary_source_name),
+                                 sheets = dictionary_worksheet_title)
+dictionary <- dictionary_source
+```
+
+```{r}
+#################### REVIEW THIS CODE FOR EACH SUBMISSION ####################
+# Clean and munge the CSDR WBS Dictionary.
+# TODO: Provide more description on how to munge a dictionary so that it can be joined with the Flat File.
+
+dictionary <- dictionary %>% 
+  rectify() %>% 
+  select(-`row/col`) %>%
+  rlang::set_names(., nm = .[1, ]) %>%
+  slice(-1) %>%
+  janitor::clean_names()
+
+# Rename the source data columns with what the rest of the script is expecting.
+dictionary <- dictionary %>% 
+  rename("WBSElementID" = cwbs_level,
+         "WBSElementName" = cwbs_element_name,
+         "WBSDictionaryDefinitions" = cwbs_definition)
+
+dictionary$WBSElementName <- dictionary$WBSElementName %>% str_trim()
+
+# Convert the WBSElementID to the `wbs` class object.
+dictionary$WBSElementID <- as_wbs(dictionary$WBSElementID)
+```
+
+## Combined CSDR Flat File Submission and Dictionary
+
+Now we combine the info in the CSDR Flat File with the Dictionary to create a single table with all of the information in one spot. 
+```{r}
+# Combine the CSDR Flat File with the Dictionary using the WBSElementID as the common field.
+csdr <- left_join(ff$Data, dictionary, by = c("WBSElementID"))
+
+# Add a column to identify if each WBSElementID is a lowest level WBS or not.
+csdr <- left_join(csdr, {wbs_expand(csdr) %>% distinct(wbs, is_lowest)},
+                   by = c("WBSElementID" = "wbs"))
+
+csdr <- csdr %>% select(-WBSElementName.y)
+
+csdr <- csdr %>% rename("WBSElementName" = WBSElementName.x)
+```
+
+We have created a data frame called `csdr` which includes all of the information provided in a DD Form 1921-1 and the CSDR WSB Dictionary.  We will use this `csdr` object to perform various reviews of the provided submission.  
+
+# CSDR Submission Review
+
+## WBS Elements Without Units, Dollars, and Hours
+
+The following is a table of lowest level WBS elements that have no reported costs, hours, and units.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         !is.na(FunctionalCategory)) %>%
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              WBSDictionaryDefinitions,
+                              WBSElementRemarks),
+              names_from  = c(UnitOfMeasure,
+                              ToDate_AtCompletion,
+                              Recurring_Nonrecurring),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  filter_if(.vars_predicate = all_vars(. == 0), .predicate = is.numeric) %>% 
+  select(WBSElementID, WBSElementName, WBSDictionaryDefinitions, WBSElementRemarks) %>%
+  gt::gt() %>% 
+  gt::tab_header(title = "WBS Dictionary Entries", 
+                 subtitle = "Lowest Level WBS With \"0\" Reported Units, Dollars, and Hours") %>% 
+  gt::tab_options(table.font.size = "8", row.padding = gt::px(1))
+```
+
+>**QUESTIONS FOR REVIEWER:** For a WBS Element to have no reported units, costs, and hours would require that WBS Element have no associated scope of work awarded on the contract.  Even if a WBS Element has no associated scope of work awarded on the contract, the WBS Dictionary entry must say so or say "NA".  
+1. Based on your knowledge of the program, is it reasonable for the identified WBS Elements listed above to have no reported units, dollars, and hours?  
+2. Does the dictionary entry for each WBS say either "NA" or that no scope of work is on contract for each element?  
+3. Are their any dictionary entries that provide a technical description or otherwise indicate/imply that the WBS Element should have included some units, costs, and/or hours?  
+
+<div class = "blue">
+
+---------------------------- **REVIEWER RESPONCE** ----------------------------
+```{r eval=FALSE, include=FALSE}
+# --------------------- INSERT RESPONSEBELOW THIS CHUNK --------------------- 
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+# --------------------- INSERT RESPONSEABOVE THIS CHUNK --------------------- 
+```
+</div>
+
+## WBS Elements With Units, Dollars, or Hours
+
+The following is a table of lowest level WBS elements that have at least reported costs, hours, or units.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         !is.na(FunctionalCategory)) %>%
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              WBSDictionaryDefinitions,
+                              WBSElementRemarks),
+              names_from  = c(UnitOfMeasure,
+                              ToDate_AtCompletion,
+                              Recurring_Nonrecurring),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  select(WBSElementID, WBSElementName, WBSDictionaryDefinitions, WBSElementRemarks) %>%
+  gt::gt() %>% 
+  gt::tab_header(title = "WBS Dictionary Entries", 
+                 subtitle = "Lowest Level WBS With Greater Than \"0\" Reported Units, Dollars, and Hours") %>% 
+  gt::tab_options(table.font.size = "8", row.padding = gt::px(1))
+```
+
+>**QUESTIONS FOR REVIEWER:** The flip side of "dictionary entries with no units, hours, dollars" is a dictionary entry that has units, hours, or dollars but says that it should not.  
+1. Are any of the above WBS dictionary "NA" or indicate that scope of work is not awarded or that a WBS element is not applicable to the design?   
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+<div class = "blue">
+
+---------------------------- **REVIEWER RESPONCE** ----------------------------
+```{r eval=FALSE, include=FALSE}
+# --------------------- INSERT RESPONSEBELOW THIS CHUNK --------------------- 
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+# --------------------- INSERT RESPONSEABOVE THIS CHUNK --------------------- 
+```
+</div>
+
+## Quantities
+
+```{r}
+# All WBS Elements
+csdr %>% 
+  filter(UnitOfMeasure == "Units") %>% 
+  pivot_wider(id_cols     = c(WBSElementID, WBSElementName),
+              names_from  = c(Recurring_Nonrecurring, ToDate_AtCompletion),
+              values_from = Value)
+
+# Only WBS Element With a Units > 0
+csdr %>% 
+  filter(UnitOfMeasure == "Units") %>% 
+  pivot_wider(id_cols     = c(WBSElementID, WBSElementName),
+              names_from  = c(Recurring_Nonrecurring, ToDate_AtCompletion),
+              values_from = Value) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+```
+
+>**QUESTIONS FOR REVIEWER:** The reported "As Of Date" for this CSDR Submission is __`r ff$MetaData$"16 Report As Of"`__ and the reported latest contract modification is __`r ff$MetaData$"10b Latest Modification"`__.  
+Given those programmatic considerations...  
+1. Are the reported `Units To Date` reasonable considering the contract's delivery and/or production schedule?  
+2. Are the reported `Units At Completion` equal to what was on contract on the as of date?  
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+<div class = "blue">
+
+---------------------------- **REVIEWER RESPONCE** ----------------------------
+```{r eval=FALSE, include=FALSE}
+# --------------------- INSERT RESPONSEBELOW THIS CHUNK --------------------- 
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+# --------------------- INSERT RESPONSEABOVE THIS CHUNK --------------------- 
+```
+</div>
+
+## Percent Complete (PctComplete) Review
+
+### Hours
+
+#### Nonrecurring
+
+The following table identifies the number of Nonrecurring Hours To Date and At Completion for only the lowest level WBS elements.
+
+```{r}
+csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Hours",
+         Recurring_Nonrecurring == "Nonrecurring",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(PctComplete = ToDate / AtCompletion,
+         PctError    = ifelse(PctComplete > 1, "CRITICAL ERROR", "-")) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+```
+
+#### Recurring
+
+The following table identifies the number of Recurring Hours To Date and At Completion for only the lowest level WBS elements.
+
+```{r}
+csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Hours",
+         Recurring_Nonrecurring == "Recurring",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(PctComplete = ToDate / AtCompletion,
+         PctError    = ifelse(PctComplete > 1, "CRITICAL ERROR", "-")) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+```
+
+### Dollars
+
+#### Nonrecurring
+
+The following table identifies the number of Nonrecurring Hours To Date and At Completion for only the lowest level WBS elements.
+
+```{r}
+csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Dollars",
+         Recurring_Nonrecurring == "Nonrecurring",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(PctComplete = ToDate / AtCompletion,
+         PctError    = ifelse(PctComplete > 1, "CRITICAL ERROR", "-")) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+```
+
+#### Recurring
+
+The following table identifies the number of Recurring Hours To Date and At Completion for only the lowest level WBS elements.
+
+```{r}
+csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Dollars",
+         Recurring_Nonrecurring == "Recurring",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(PctComplete = ToDate / AtCompletion,
+         PctError    = ifelse(PctComplete > 1, "CRITICAL ERROR", "-")) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+```
+
+### Hours vs. Dollars
+
+#### Nonrecurring
+
+The following table compares "HoursPctCompete" against "DollarsPctComplete" and is arranged in order of highest to smallest delta between those values. 
+
+```{r}
+csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Hours",
+         Recurring_Nonrecurring == "Nonrecurring",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(HoursPctComplete = ToDate / AtCompletion) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  select(-ToDate, -AtCompletion) %>% 
+  
+  left_join(., {
+
+csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Dollars",
+         Recurring_Nonrecurring == "Nonrecurring",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(DollarsPctComplete = ToDate / AtCompletion) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  select(-ToDate, -AtCompletion)
+},
+by = c("WBSElementID", "WBSElementName", "FunctionalCategory", "FunctionalElement")) %>% 
+  mutate(Delta = HoursPctComplete - DollarsPctComplete) %>% 
+  filter(Delta != 0) %>% 
+  arrange(desc(abs(Delta)))
+```
+
+#### Recurring
+
+The following table compares "HoursPctCompete" against "DollarsPctComplete" and is arranged in order of highest to smallest delta between those values. 
+
+```{r}
+left_join({
+csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Hours",
+         Recurring_Nonrecurring == "Recurring",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(HoursPctComplete = ToDate / AtCompletion) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  select(-ToDate, -AtCompletion)}, {
+csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Dollars",
+         Recurring_Nonrecurring == "Recurring",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(DollarsPctComplete = ToDate / AtCompletion) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  select(-ToDate, -AtCompletion)
+},
+by = c("WBSElementID", "WBSElementName", "FunctionalCategory", "FunctionalElement")) %>% 
+  mutate(Delta = HoursPctComplete - DollarsPctComplete) %>% 
+  filter(Delta != 0) %>% 
+  arrange(desc(abs(Delta)))
+```
+
+>**QUESTIONS FOR REVIEWER:** The reported "As Of Date" for this CSDR Submission is __`r ff$MetaData$"16 Report As Of"`__ and the reported latest contract modification is __`r ff$MetaData$"10b Latest Modification"`__.  
+Given those programmatic considerations...  
+1. Are there any `PctErrors` (i.e., a WBS with greater than 100% complete)?   
+2. Are the observed percent complete (`PctComplete`) values reasonable?  
+3. Are there any WBS elements which have a large `Delta` between `HoursPctComplete` and `DollarsPctComplete` (there is no rule of for how much of a `Delta` is too much but more than a +/- 10% difference is likely worth consideration).
+
+<style>
+div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
+</style>
+<div class = "blue">
+
+---------------------------- **REVIEWER RESPONCE** ----------------------------
+```{r eval=FALSE, include=FALSE}
+# --------------------- INSERT RESPONSEBELOW THIS CHUNK --------------------- 
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+# --------------------- INSERT RESPONSEABOVE THIS CHUNK --------------------- 
+```
+</div>
+
+### Average Labor Rate
+
+The following table identifies the average labor rate by FunctionalElement To Date for only the lowest level WBS elements.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         ToDate_AtCompletion == "ToDate",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`Direct Engineering`   = sum(`Direct Engineering Labor_Dollars` / `Direct Engineering Labor_Hours`, na.rm = TRUE),
+         `Direct Tooling`       = sum(`Direct Quality Control Labor_Dollars` / `Direct Quality Control Labor_Hours`, na.rm = TRUE),
+         `Direct Manufacturing` = sum(`Direct Manufacturing Labor_Dollars` / `Direct Manufacturing Labor_Hours`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `Direct Engineering`,
+         `Direct Tooling`,
+         `Direct Manufacturing`) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+
+```
+
+The following table identifies the average labor rate by FunctionalElement At Completion for only the lowest level WBS elements.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         ToDate_AtCompletion == "AtCompletion",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`Direct Engineering`   = sum(`Direct Engineering Labor_Dollars` / `Direct Engineering Labor_Hours`, na.rm = TRUE),
+         `Direct Tooling`       = sum(`Direct Quality Control Labor_Dollars` / `Direct Quality Control Labor_Hours`, na.rm = TRUE),
+         `Direct Manufacturing` = sum(`Direct Manufacturing Labor_Dollars` / `Direct Manufacturing Labor_Hours`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `Direct Engineering`,
+         `Direct Tooling`,
+         `Direct Manufacturing`) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+```
+
+
+```{r eval=FALSE, include=FALSE}
+### INCOMPLETE ###
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         FunctionalElement %in% c("Direct Engineering Labor"),
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, Recurring_Nonrecurring, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`Direct Engineering`   = sum(`Direct Engineering Labor_Dollars` / `Direct Engineering Labor_Hours`, na.rm = TRUE)) %>% 
+        # `Direct Tooling`       = sum(`Direct Quality Control Labor_Dollars` / `Direct Quality Control Labor_Hours`, na.rm = TRUE),
+        # `Direct Manufacturing` = sum(`Direct Manufacturing Labor_Dollars` / `Direct Manufacturing Labor_Hours`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `Direct Engineering`) %>% 
+        # `Direct Tooling`,
+        # `Direct Manufacturing`) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+```
+
+-------------------------------------------------------------------------------
+Each WBS Dictionary entry (except those with no expected work^[Via DI-MGMT-81334D: "If work is not expected to occur for a given WBS element, the CWBS dictionary definition must indicate that this element is not applicable"].) must include the following (quotes via DI-MGMT-81334D):  
+
+1. *Technical Description*: "[System level WBS] must include a general system level description (i.e., highest level WBS element) of the military end item that captures top-level attributes of the system... provide general descriptions of the physical characteristics of each individual element below the system level.... Each WBS element definition must provide the [reader] with the means to determine what the item is, what it does within the system, and how the item is physically defined.... [I]nclude a short description of the process used to design, produce or sustain the end item or service."  
+2. *Description of Recurring and Nonrecurring*: "Cost content definitions must include explanations of recurring versus nonrecurring efforts...".  
+3. *Description by Functional Element*: "Cost content definitions must include... characterizations by functional category (i.e., engineering, tooling, quality control, and manufacturing) as appropriate [(i.e., provide a description for engineering, tooling, quality control, or manufacturing if the reported costs/hours for that functional category is greater than 0)]".  
+4. *Description of Type of Activity*: "The description must address the types of activities (e.g., design, production, analysis, or management) included within the WBS element."  
+5. *Completed by Prime Subcontractor / Make vs. Buy*: "Cost content definitions must include... purchased versus made in-house decisions.... These descriptions must include information on whether the reporting contractor or a supplier/subcontractor is performing the work being described."  
+6. *Description of GFE*: "All GFE items being integrated into the system as part of the contract must be labeled as such in the CWBS dictionary under the appropriate elements."  
+
+-------------------------------------------------------------------------------
+
+# Other How-To's
+
+## Downloading an XML Version of a CSDR Plan{#download_xml_csdr_plan}
+
+How do find and download an XML copy of a CSDR Plan.  
+
+1. Log into the secure "[CADE Portal](https://service.cade.osd.mil/cadeportal)".
+1. Select "[CSDR-SR](https://service.cade.osd.mil/csdrsr/)" from the "Applications" menu.
+1. Hover over "My CSDR" and then click "[Program Planning](https://service.cade.osd.mil/csdrsr/site/ProgramPlanning/ProgramPlanningModuleSearch.aspx)".
+1. Find the program of interest and click on its name.
+1. Click "Approved Documentation".
+1. Click on the applicable "Plan Number".
+1. Scroll down to the "Documents" section and find the row/area for the CSDR Plan(s) (normally this is the first section under "Documents").
+1. Find and click the icon that looks like a piece of paper with three lines (if you hover over it, you can confirm its name and that it ends in ".XML").
+1. Save the file to the location of your choosing.
+
+-------------------------------------------------------------------------------
+# PowerPoint List
+
+1. Utilize cPet to confirm there are no critical errors.  
+
+2. Merge submission files into a tidy format.  
+
+3. Confirm quantities and reported CSDR price match the contract.  
+
+4. Confirm lowest level WBS elements units, hours, and costs are consistent with dictionary.  
+
+* Are WBS with 0 units/hours/dollars reported and the dictionary says there is no SOW?
+* Are there WBS with > 0 units/hours/dollars reported where the dictionary says there is SOW?
+
+5. Confirm units, hours, and dollars To Date vs. At Competition appears reasonable.  
+
+* Are reported PctDollars or PctHours complete reasonable compared to program schedule, units DD-250’ed, etc.?  
+* Are PctDollars significantly different than PctHours complete?  
+
+6. Confirm units/hours/dollars Nonrecurring vs. Recurring appears reasonable.
+
+* Are material costs primarily recurring?  
+* Is engineering labor primarily non-recurring?  
+
+7. Confirm labor rates by Functional Element appear reasonable.  
+
+* Are the averages reasonable?  
+*  For common Functional Elements, are variances by WBS Element, Recurring vs. Nonrecurring, To Date vs. At Completion reasonable?  
+
+8. Confirm recurring unit cost by WSB Element appear reasonable.  
+
+* Are the averages reasonable?  
+*Are averages To Date reasonably compared to EAC/FAC.  
+
+9. Do dictionary entries include the DID required info?  
+
+10. Do WBS element and submission remarks include the required info?  
+
+11. Are there any special requirements listed in the CSDR Plan that require checks?  
+
+12 .Are there any other data deliverables (e.g., a BOM) that need to be checked for consistency with the CSDR submission (or could provide additional explanation)?  
