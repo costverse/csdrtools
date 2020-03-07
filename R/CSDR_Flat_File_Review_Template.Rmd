@@ -46,44 +46,40 @@ source(here::here("R", "read_flat_file.R"))
 
 # Introduction & Overview
 
-
 ```{r}
 # TODO: Add the checklist from the pptx file into here and/or an intro to talk about what this is.
 ```
 
 # Reading Data Into R
 
-## Creating the CSDR Submission Flat File
-
-The following workflow utilizes the CSDR Flat File submission format.  If you already have a Flat File format submission, [you can skip a few steps](#read_flat_file).  If the submission was not in the Flat File format, it can be created utilizing [cPet desktop](https://cade.osd.mil/tools/csdr-tools) and the following files:  
-
-1. An XML copy of the CSDR Plan^[For instructions on how to find and download an XML copy of a CSDR Plan, [click here](#download_xml_csdr_plan).]
-1. An Excel copy of the CSDR DD Form 1921 submission.  
-1. An Excel copy of the CSDR DD Form 1921-1 submission.  
-
-Utilize the following directions to convert the Plan, 1921, and 1921-1 into the Flat File format:  
- 
-```{r}
-# TODO: Update this to provide better direction on what to do if there is a critical error.  Maybe include a screenshot of what that looks like.  Tell the user to 100% stop the review and send back to the submitter for correction before moving forward.
-```
- 
-1. Drag and drop the the XML CSDR Plan into cPet desktop.
-1. Right-click on the CSDR Plan icon, and select "Import DD 1921..." and point the selection box to the DD Form 1921 Excel submission.^[If there are critical errors identified during this step, the submitter may have to fix them and resubmit before you can continue.]
-1. After the DD Form 1921 has been imported to cPet, right-click the new DD Form 1921 icon and select "Import DD 1921-1..." and point the selection box to the DD Form 1921 Excel submission.^[If there are critical errors identified during this step, the submitter may have to fix them and resubmit before you can continue.]
-1. After the DD Form 1921-1 has been imported to cPet, right-click the new DD Form 1921-1 icon and select "Export Flat File (1921 & 1921-1)..." and save the file. 
-1. cPet will export the file as a legacy (".xls") Excel file.  We need to convert the Flat File to Excel's new ".xlsx" file format to work with the rest of this code.  Open the cPet created file in Excel, click "File", "Save As", select the save location, click the "Save as type:" drop-down and select "Excel Workbook (*.xlsx)", click "Save".  
-
 ## Reading the CSDR Submission Flat File{#read_flat_file}
 
-Provide the file name and path to the CSDR Flat File.  
-```{r}
-# Provide the filename (with extension) of the CSDR submission Flat File.
-flat_file_source_name <- "FILE_NAME.xlsx"
+### Source File Path Info
 
-# Provide the path to the CSDR submission Flat File (do not include the filename
-# or extension).
-flat_file_source_path <- here::here("data", "source")
+Provide the file name and path to the identified CSDR Flat File.  
+```{r}
+# Provide the file name (with extension) of the CSDR submission Flat File.
+flat_file_source_name <- "Flat_File_fake.xlsx"
+
+# Provide the path to the CSDR submission Flat File (do not include the 
+# file name or extension).
+flat_file_source_path <- here::here("inst", "extdata")
 ```
+
+Provide the file name and path to the CSDR WBS Dictionary.  
+```{r}
+# Provide the filename (with extension) of the CSDR WBS Dictionary.
+dictionary_source_name <- "fake_dictionary.xlsx"
+
+# Provide the title of the worksheet the CSDR WBS Dictionary is found on.
+dictionary_worksheet_title <- "Sheet1"
+
+# Provide the path to the CSDR WBS Dictionary (do not include the filename
+# or extension).
+dictionary_source_path <- here::here("inst", "extdata")
+```
+
+### Identify if Hours and/or Dollars are in "Thousands"
 
 Indicate if the file was reported in thousands of hours and/or dollars^[Legacy CSDR requirements directed that hours and dollars be reported in 'thousands']. 
 ```{r}
@@ -93,6 +89,8 @@ hours_in_k <- TRUE
 # Were dollars reported in 'thousands of dollars'?
 dollars_in_k <- TRUE
 ```
+
+### Read CSDR Flat File
 
 Read the CSDR Flat File into R, convert hours and dollars as necessary and perform other cleaning operations.  
 ```{r}
@@ -134,7 +132,7 @@ ff$Data <- ff$Data %>%
 ff$Data$WBSElementID <- as_wbs(ff$Data$WBSElementID)
 ```
 
-### Clean Remarks (if required)
+### Clean CSDR Flat File Remarks (if required)
 
 If the submission includes remarks about hours or dollars being reported in 'thousands', it is a good idea to remove those remarks since that data as already been converted back to unit hours/dollars (otherwise we might forget later and then get confused when we see the remark).  This code likely needs to be reviewed and/or likely need to be tailored to work with each submission.
 ```{r}
@@ -145,20 +143,7 @@ If the submission includes remarks about hours or dollars being reported in 'tho
 
 ```
 
-## Reading the CSDR Dictionary 
-
-Provide the file name and path to the CSDR WBS Dictionary.  
-```{r}
-# Provide the filename (with extension) of the CSDR WBS Dictionary.
-dictionary_source_name <- "FILE_NAME.xlsx"
-
-# Provide the title of the worksheet the CSDR WBS Dictionary is found on.
-dictionary_worksheet_title <- "WORKSHEET_TITLE"
-
-# Provide the path to the CSDR WBS Dictionary (do not include the filename
-# or extension).
-dictionary_source_path <- here::here("data", "source")
-```
+### Reading the CSDR Dictionary 
 
 ```{r}
 # Import the CSDR WBS Dictionary.  Keep an unmodified copy in `dictionary_source`,
@@ -166,6 +151,8 @@ dictionary_source <- tidyxl::xlsx_cells(path =  paste0(dictionary_source_path, "
                                  sheets = dictionary_worksheet_title)
 dictionary <- dictionary_source
 ```
+
+### Clean and Tidy CSDR WBS Dictionary (if required)
 
 ```{r}
 #################### REVIEW THIS CODE FOR EACH SUBMISSION ####################
@@ -181,8 +168,8 @@ dictionary <- dictionary %>%
 
 # Rename the source data columns with what the rest of the script is expecting.
 dictionary <- dictionary %>% 
-  rename("WBSElementID" = cwbs_level,
-         "WBSElementName" = cwbs_element_name,
+  rename("WBSElementID" = wbs_code,
+         "WBSElementName" = wbs_reporting_elements,
          "WBSDictionaryDefinitions" = cwbs_definition)
 
 dictionary$WBSElementName <- dictionary$WBSElementName %>% str_trim()
@@ -227,13 +214,14 @@ csdr %>%
                               ToDate_AtCompletion,
                               Recurring_Nonrecurring),
               values_from = Value,
-              values_fn   = list(Value = sum)) %>% 
+              values_fn   = list(Value = sum),
+              values_fill = list(Value = 0)) %>% 
   filter_if(.vars_predicate = all_vars(. == 0), .predicate = is.numeric) %>% 
   select(WBSElementID, WBSElementName, WBSDictionaryDefinitions, WBSElementRemarks) %>%
   gt::gt() %>% 
   gt::tab_header(title = "WBS Dictionary Entries", 
                  subtitle = "Lowest Level WBS With \"0\" Reported Units, Dollars, and Hours") %>% 
-  gt::tab_options(table.font.size = "8", row.padding = gt::px(1))
+  gt::tab_options(table.font.size = "8",data_row.padding = gt::px(1))
 ```
 
 >**QUESTIONS FOR REVIEWER:** For a WBS Element to have no reported units, costs, and hours would require that WBS Element have no associated scope of work awarded on the contract.  Even if a WBS Element has no associated scope of work awarded on the contract, the WBS Dictionary entry must say so or say "NA".  
@@ -277,7 +265,7 @@ csdr %>%
   gt::gt() %>% 
   gt::tab_header(title = "WBS Dictionary Entries", 
                  subtitle = "Lowest Level WBS With Greater Than \"0\" Reported Units, Dollars, and Hours") %>% 
-  gt::tab_options(table.font.size = "8", row.padding = gt::px(1))
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1))
 ```
 
 >**QUESTIONS FOR REVIEWER:** The flip side of "dictionary entries with no units, hours, dollars" is a dictionary entry that has units, hours, or dollars but says that it should not.  
@@ -641,8 +629,9 @@ Each WBS Dictionary entry (except those with no expected work^[Via DI-MGMT-81334
 
 -------------------------------------------------------------------------------
 
-# Other How-To's
+# How-To's
 
+-------------------------------------------------------------------------------
 ## Downloading an XML Version of a CSDR Plan{#download_xml_csdr_plan}
 
 How do find and download an XML copy of a CSDR Plan.  
@@ -658,43 +647,51 @@ How do find and download an XML copy of a CSDR Plan.
 1. Save the file to the location of your choosing.
 
 -------------------------------------------------------------------------------
+## Creating the CSDR Submission Flat File
+
+The following workflow utilizes the CSDR Flat File submission format.  If you already have a Flat File format submission, [you can skip a few steps](#read_flat_file).  If the submission was not in the Flat File format, it can be created utilizing [cPet desktop](https://cade.osd.mil/tools/csdr-tools) and the following files:  
+
+1. An XML copy of the CSDR Plan^[For instructions on how to find and download an XML copy of a CSDR Plan, [click here](#download_xml_csdr_plan).]
+1. An Excel copy of the CSDR DD Form 1921 submission.  
+1. An Excel copy of the CSDR DD Form 1921-1 submission.  
+
+Utilize the following directions to convert the Plan, 1921, and 1921-1 into the Flat File format:  
+ 
+```{r}
+# TODO: Update this to provide better direction on what to do if there is a critical error.  Maybe include a screenshot of what that looks like.  Tell the user to 100% stop the review and send back to the submitter for correction before moving forward.
+```
+ 
+1. Drag and drop the the XML CSDR Plan into cPet desktop.
+1. Right-click on the CSDR Plan icon, and select "Import DD 1921..." and point the selection box to the DD Form 1921 Excel submission.^[If there are critical errors identified during this step, the submitter may have to fix them and resubmit before you can continue.]
+1. After the DD Form 1921 has been imported to cPet, right-click the new DD Form 1921 icon and select "Import DD 1921-1..." and point the selection box to the DD Form 1921 Excel submission.^[If there are critical errors identified during this step, the submitter may have to fix them and resubmit before you can continue.]
+1. After the DD Form 1921-1 has been imported to cPet, right-click the new DD Form 1921-1 icon and select "Export Flat File (1921 & 1921-1)..." and save the file. 
+1. cPet will export the file as a legacy (".xls") Excel file.  We need to convert the Flat File to Excel's new ".xlsx" file format to work with the rest of this code.  Open the cPet created file in Excel, click "File", "Save As", select the save location, click the "Save as type:" drop-down and select "Excel Workbook (*.xlsx)", click "Save".  
+
+-------------------------------------------------------------------------------
 # PowerPoint List
 
 1. Utilize cPet to confirm there are no critical errors.  
-
-2. Merge submission files into a tidy format.  
-
-3. Confirm quantities and reported CSDR price match the contract.  
-
-4. Confirm lowest level WBS elements units, hours, and costs are consistent with dictionary.  
-
-* Are WBS with 0 units/hours/dollars reported and the dictionary says there is no SOW?
-* Are there WBS with > 0 units/hours/dollars reported where the dictionary says there is SOW?
-
-5. Confirm units, hours, and dollars To Date vs. At Competition appears reasonable.  
-
-* Are reported PctDollars or PctHours complete reasonable compared to program schedule, units DD-250’ed, etc.?  
-* Are PctDollars significantly different than PctHours complete?  
-
-6. Confirm units/hours/dollars Nonrecurring vs. Recurring appears reasonable.
-
-* Are material costs primarily recurring?  
-* Is engineering labor primarily non-recurring?  
-
-7. Confirm labor rates by Functional Element appear reasonable.  
-
-* Are the averages reasonable?  
-*  For common Functional Elements, are variances by WBS Element, Recurring vs. Nonrecurring, To Date vs. At Completion reasonable?  
-
-8. Confirm recurring unit cost by WSB Element appear reasonable.  
-
-* Are the averages reasonable?  
-*Are averages To Date reasonably compared to EAC/FAC.  
-
-9. Do dictionary entries include the DID required info?  
-
-10. Do WBS element and submission remarks include the required info?  
-
-11. Are there any special requirements listed in the CSDR Plan that require checks?  
-
-12 .Are there any other data deliverables (e.g., a BOM) that need to be checked for consistency with the CSDR submission (or could provide additional explanation)?  
+1. Merge submission files into a tidy format.  
+1. Confirm quantities and reported CSDR price match the contract.  
+1. Confirm lowest level WBS elements units, hours, and costs are consistent with dictionary.  
+  * Are WBS with 0 units/hours/dollars reported and the dictionary says there is no SOW?
+  * Are there WBS with > 0 units/hours/dollars reported where the dictionary says there is SOW?
+1. Confirm units, hours, and dollars To Date vs. At Competition appears reasonable.  
+  * Are reported PctDollars or PctHours complete reasonable compared to program schedule, units DD-250’ed, etc.?  
+  * Are PctDollars significantly different than PctHours complete?  
+1. Confirm units/hours/dollars Nonrecurring vs. Recurring appears reasonable.
+  * Are material costs primarily recurring?  
+  * Is engineering labor primarily non-recurring?  
+1. Confirm labor rates by Functional Element appear reasonable.  
+  * Are the averages reasonable?  
+  * For common Functional Elements, are variances by WBS Element, Recurring vs. Nonrecurring, To Date vs. At Completion reasonable?  
+1. Confirm the overhead rate appear reasonable.
+  * Are they consistent from WBS element to element?  
+  * Is there value reasonable and/or check that it is close to their Forward Rate Pricing Agreement/Proposal values.
+9. Confirm recurring unit cost by WSB Element appear reasonable.  
+  * Are the averages reasonable?  
+  * Are averages To Date reasonably compared to EAC/FAC.  
+1. Do dictionary entries include the DID required info?  
+1. Do WBS element and submission remarks include the required info?  
+1. Are there any special requirements listed in the CSDR Plan that require checks?  
+1 .Are there any other data deliverables (e.g., a BOM) that need to be checked for consistency with the CSDR submission (or could provide additional explanation)?  
