@@ -221,7 +221,7 @@ csdr %>%
   gt::gt() %>% 
   gt::tab_header(title = "WBS Dictionary Entries", 
                  subtitle = "Lowest Level WBS With \"0\" Reported Units, Dollars, and Hours") %>% 
-  gt::tab_options(table.font.size = "8",data_row.padding = gt::px(1))
+  gt::tab_options(table.font.size = "8",data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"))
 ```
 
 >**QUESTIONS FOR REVIEWER:** For a WBS Element to have no reported units, costs, and hours would require that WBS Element have no associated scope of work awarded on the contract.  Even if a WBS Element has no associated scope of work awarded on the contract, the WBS Dictionary entry must say so or say "NA".  
@@ -265,7 +265,7 @@ csdr %>%
   gt::gt() %>% 
   gt::tab_header(title = "WBS Dictionary Entries", 
                  subtitle = "Lowest Level WBS With Greater Than \"0\" Reported Units, Dollars, and Hours") %>% 
-  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1))
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"))
 ```
 
 >**QUESTIONS FOR REVIEWER:** The flip side of "dictionary entries with no units, hours, dollars" is a dictionary entry that has units, hours, or dollars but says that it should not.  
@@ -538,7 +538,11 @@ div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
 
 ### Average Labor Rate
 
-The following table identifies the average labor rate by FunctionalElement To Date for only the lowest level WBS elements.
+#### Average Labor Rate by Functional Element
+
+##### To Date
+
+The following table identifies the average labor rate To Date by FunctionalElement for lowest level WBS elements.
 
 ```{r}
 csdr %>% 
@@ -553,19 +557,22 @@ csdr %>%
               values_fn   = list(Value = sum)) %>% 
   group_by(WBSElementID,
            WBSElementName) %>% 
-  mutate(`Direct Engineering`   = sum(`Direct Engineering Labor_Dollars` / `Direct Engineering Labor_Hours`, na.rm = TRUE),
-         `Direct Tooling`       = sum(`Direct Quality Control Labor_Dollars` / `Direct Quality Control Labor_Hours`, na.rm = TRUE),
-         `Direct Manufacturing` = sum(`Direct Manufacturing Labor_Dollars` / `Direct Manufacturing Labor_Hours`, na.rm = TRUE)) %>% 
+  mutate(`Direct Engineering`     = sum(`Direct Engineering Labor_Dollars` / `Direct Engineering Labor_Hours`, na.rm = TRUE),
+         `Direct Tooling`         = sum(`Direct Tooling Labor_Dollars` / `Direct Tooling Labor_Hours`, na.rm = TRUE),
+         `Direct Quality Control` = sum(`Direct Quality Control Labor_Dollars` / `Direct Quality Control Labor_Hours`, na.rm = TRUE),
+         `Direct Manufacturing`   = sum(`Direct Manufacturing Labor_Dollars` / `Direct Manufacturing Labor_Hours`, na.rm = TRUE)) %>% 
   select(WBSElementID,
          WBSElementName,
          `Direct Engineering`,
          `Direct Tooling`,
+         `Direct Quality Control`,
          `Direct Manufacturing`) %>% 
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
-
 ```
 
-The following table identifies the average labor rate by FunctionalElement At Completion for only the lowest level WBS elements.
+##### At Completion
+
+The following table identifies the average labor rate At Completion by FunctionalElement for lowest level WBS elements.
 
 ```{r}
 csdr %>% 
@@ -580,17 +587,301 @@ csdr %>%
               values_fn   = list(Value = sum)) %>% 
   group_by(WBSElementID,
            WBSElementName) %>% 
-  mutate(`Direct Engineering`   = sum(`Direct Engineering Labor_Dollars` / `Direct Engineering Labor_Hours`, na.rm = TRUE),
-         `Direct Tooling`       = sum(`Direct Quality Control Labor_Dollars` / `Direct Quality Control Labor_Hours`, na.rm = TRUE),
-         `Direct Manufacturing` = sum(`Direct Manufacturing Labor_Dollars` / `Direct Manufacturing Labor_Hours`, na.rm = TRUE)) %>% 
+  mutate(`Direct Engineering`     = sum(`Direct Engineering Labor_Dollars` / `Direct Engineering Labor_Hours`, na.rm = TRUE),
+         `Direct Tooling`         = sum(`Direct Tooling Labor_Dollars` / `Direct Tooling Labor_Hours`, na.rm = TRUE),
+         `Direct Quality Control` = sum(`Direct Quality Control Labor_Dollars` / `Direct Quality Control Labor_Hours`, na.rm = TRUE),
+         `Direct Manufacturing`   = sum(`Direct Manufacturing Labor_Dollars` / `Direct Manufacturing Labor_Hours`, na.rm = TRUE)) %>% 
   select(WBSElementID,
          WBSElementName,
          `Direct Engineering`,
          `Direct Tooling`,
+         `Direct Quality Control`,
          `Direct Manufacturing`) %>% 
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
 ```
 
+#### Average Direct Enginnering Labor Rate To Date vs. At Completion
+
+The following table identifies the average Direct Engineering labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Direct Engineering Labor_Dollars_ToDate` / `Direct Engineering Labor_Hours_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Direct Engineering Labor_Dollars_AtCompletion` / `Direct Engineering Labor_Hours_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta))
+```
+
+#### Average Direct Tooling Labor Rate To Date vs. At Completion
+
+The following table identifies the average Direct Quality Control labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Direct Tooling Labor_Dollars_ToDate` / `Direct Tooling Labor_Hours_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Direct Tooling Labor_Dollars_AtCompletion` / `Direct Tooling Labor_Hours_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta))
+```
+
+#### Average Direct Quality Control Labor Rate To Date vs. At Completion
+
+The following table identifies the average Direct Quality Control labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Direct Quality Control Labor_Dollars_ToDate` / `Direct Quality Control Labor_Hours_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Direct Quality Control Labor_Dollars_AtCompletion` / `Direct Quality Control Labor_Hours_AtCompletion`, na.rm = TRUE),
+         Delta = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta))
+```
+
+#### Average Direct Manufacturing Labor Rate To Date vs. At Completion
+
+The following table identifies the average Direct Manufacturing labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Direct Manufacturing Labor_Dollars_ToDate` / `Direct Manufacturing Labor_Hours_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Direct Manufacturing Labor_Dollars_AtCompletion` / `Direct Manufacturing Labor_Hours_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta))
+```
+
+### Average Overhead Rates
+
+#### Average Overhead Factor by Functional Element
+
+##### To Date
+
+The following table identifies the average overhead factor To Date by FunctionalElement for lowest level WBS elements.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         ToDate_AtCompletion == "ToDate",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`Engineering Overhead Rate` = 
+           sum(`Engineering Overhead_Dollars` / `Direct Engineering Labor_Dollars`, 
+               na.rm = TRUE),
+         `Manufacturing Operations Overhead Rate` = 
+           sum(`Manufacturing Operations Overhead_Dollars` / `Direct Manufacturing Labor_Dollars`,
+               na.rm = TRUE),
+         `Material Handling/Overhead Rate` = 
+           sum((`Raw Material_Dollars`
+                + `Purchased Parts_Dollars`
+                + `Purchased Equipment_Dollars`) 
+                / `Material Handling/Overhead_Dollars`,
+               na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `Engineering Overhead Rate`,
+         `Manufacturing Operations Overhead Rate`,
+         `Material Handling/Overhead Rate`) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+```
+
+##### At Completion
+
+The following table identifies the average overhead factor At Completion by FunctionalElement for lowest level WBS elements.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         ToDate_AtCompletion == "AtCompletion",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`Engineering Overhead Rate` = 
+           sum(`Engineering Overhead_Dollars` / `Direct Engineering Labor_Dollars`, 
+               na.rm = TRUE),
+         `Manufacturing Operations Overhead Rate` = 
+           sum(`Manufacturing Operations Overhead_Dollars` / `Direct Manufacturing Labor_Dollars`,
+               na.rm = TRUE),
+         `Material Handling/Overhead Rate` = 
+           sum((`Raw Material_Dollars`
+                + `Purchased Parts_Dollars`
+                + `Purchased Equipment_Dollars`) 
+                / `Material Handling/Overhead_Dollars`,
+               na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `Engineering Overhead Rate`,
+         `Manufacturing Operations Overhead Rate`,
+         `Material Handling/Overhead Rate`) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+```
+
+#### Average Direct Enginnering Overhead Rate To Date vs. At Completion
+
+The following table identifies the average Direct Engineering Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Engineering Overhead_Dollars_ToDate` / `Direct Engineering Labor_Dollars_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Engineering Overhead_Dollars_AtCompletion` / `Direct Engineering Labor_Dollars_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta))
+```
+
+#### Average Manufacturing Operations Overhead Factor To Date vs. At Completion
+
+The following table identifies the average Manufacturing Operations Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Manufacturing Operations Overhead_Dollars_ToDate` / `Manufacturing Operations Overhead_Dollars_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Manufacturing Operations Overhead_Dollars_AtCompletion` / `Manufacturing Operations Overhead_Dollars_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta))
+```
+
+#### Average Material Handling/Overhead Factor To Date vs. At Completion
+
+The following table identifies the average Material Handling/Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r}
+csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Material Handling/Overhead_Dollars_ToDate` / `Material Handling/Overhead_Dollars_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Material Handling/Overhead_Dollars_AtCompletion` / `Material Handling/Overhead_Dollars_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta))
+```
+
+```{r}
+
+# %>% 
+#   pivot_longer(cols = -c(1:2), names_to = "ToDate_AtCompletion", values_to = "Value") %>% 
+#   ggplot(aes(x = paste0(as.character(WBSElementID), " - ", WBSElementName), y = Value)) +
+#   geom_point() +
+#   coord_flip()
+```
 
 ```{r eval=FALSE, include=FALSE}
 ### INCOMPLETE ###
