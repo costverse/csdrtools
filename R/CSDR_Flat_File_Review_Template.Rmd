@@ -39,6 +39,7 @@ library(stringr)
 library(wbstools)
 library(unpivotr)
 library(purrr)
+library(gt)
 
 source(here::here("R", "flat_file_class.R"))
 source(here::here("R", "read_flat_file.R"))
@@ -49,6 +50,32 @@ source(here::here("R", "read_flat_file.R"))
 ```{r}
 # TODO: Add the checklist from the pptx file into here and/or an intro to talk about what this is.
 ```
+
+1. Utilize cPet to confirm there are no critical errors.  
+1. Merge submission files into a tidy format.  
+1. Confirm quantities and reported CSDR price match the contract.  
+1. Confirm lowest level WBS elements units, hours, and costs are consistent with dictionary.  
+   * Are WBS with 0 units/hours/dollars reported and the dictionary says there is no SOW?
+   * Are there WBS with > 0 units/hours/dollars reported where the dictionary says there is SOW?
+1. Confirm units, hours, and dollars To Date vs. At Competition appears reasonable.  
+   * Are reported PctDollars or PctHours complete reasonable compared to program schedule, units DD-250’ed, etc.?  
+   * Are PctDollars significantly different than PctHours complete?  
+1. Confirm units/hours/dollars Nonrecurring vs. Recurring appears reasonable.
+   * Are material costs primarily recurring?  
+   * Is engineering labor primarily non-recurring?  
+1. Confirm labor rates by Functional Element appear reasonable.  
+   * Are the averages reasonable?  
+   * For common Functional Elements, are variances by WBS Element, Recurring vs. Nonrecurring, To Date vs. At Completion reasonable?  
+1. Confirm the overhead rate appear reasonable.
+   * Are they consistent from WBS element to element?  
+   * Is there value reasonable and/or check that it is close to their Forward Rate Pricing Agreement/Proposal values.
+1. Confirm recurring unit cost by WSB Element appear reasonable.  
+   * Are the averages reasonable?  
+   * Are averages To Date reasonably compared to EAC/FAC.  
+1. Do dictionary entries include the DID required info?  
+1. Do WBS element and submission remarks include the required info?  
+1. Are there any special requirements listed in the CSDR Plan that require checks?  
+1. Are there any other data deliverables (e.g., a BOM) that need to be checked for consistency with the CSDR submission (or could provide additional explanation)?  
 
 # Reading Data Into R
 
@@ -198,12 +225,14 @@ We have created a data frame called `csdr` which includes all of the information
 
 # CSDR Submission Review
 
-## WBS Elements Without Units, Dollars, and Hours
+## Dictionary vs. Submission 
+
+### WBS Elements Without Units, Dollars, and Hours
 
 The following is a table of lowest level WBS elements that have no reported costs, hours, and units.
 
 ```{r}
-csdr %>% 
+wbs_with_no_cost_hours_units <- csdr %>% 
   filter(is_lowest == "TRUE",
          !is.na(FunctionalCategory)) %>%
   pivot_wider(id_cols     = c(WBSElementID,
@@ -217,7 +246,9 @@ csdr %>%
               values_fn   = list(Value = sum),
               values_fill = list(Value = 0)) %>% 
   filter_if(.vars_predicate = all_vars(. == 0), .predicate = is.numeric) %>% 
-  select(WBSElementID, WBSElementName, WBSDictionaryDefinitions, WBSElementRemarks) %>%
+  select(WBSElementID, WBSElementName, WBSDictionaryDefinitions, WBSElementRemarks)
+
+wbs_with_no_cost_hours_units %>% 
   gt::gt() %>% 
   gt::tab_header(title = "WBS Dictionary Entries", 
                  subtitle = "Lowest Level WBS With \"0\" Reported Units, Dollars, and Hours") %>% 
@@ -233,22 +264,22 @@ csdr %>%
 
 ---------------------------- **REVIEWER RESPONCE** ----------------------------
 ```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSEBELOW THIS CHUNK --------------------- 
+# --------------------- INSERT RESPONSE BELOW THIS CHUNK --------------------- 
 ```
 
 
 
 ```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSEABOVE THIS CHUNK --------------------- 
+# --------------------- INSERT RESPONSE ABOVE THIS CHUNK --------------------- 
 ```
 </div>
 
-## WBS Elements With Units, Dollars, or Hours
+### WBS Elements With Units, Dollars, or Hours
 
 The following is a table of lowest level WBS elements that have at least reported costs, hours, or units.
 
 ```{r}
-csdr %>% 
+wbs_with_cost_hours_units <- csdr %>% 
   filter(is_lowest == "TRUE",
          !is.na(FunctionalCategory)) %>%
   pivot_wider(id_cols     = c(WBSElementID,
@@ -261,7 +292,9 @@ csdr %>%
               values_from = Value,
               values_fn   = list(Value = sum)) %>% 
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
-  select(WBSElementID, WBSElementName, WBSDictionaryDefinitions, WBSElementRemarks) %>%
+  select(WBSElementID, WBSElementName, WBSDictionaryDefinitions, WBSElementRemarks)
+
+wbs_with_cost_hours_units %>% 
   gt::gt() %>% 
   gt::tab_header(title = "WBS Dictionary Entries", 
                  subtitle = "Lowest Level WBS With Greater Than \"0\" Reported Units, Dollars, and Hours") %>% 
@@ -278,33 +311,53 @@ div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
 
 ---------------------------- **REVIEWER RESPONCE** ----------------------------
 ```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSEBELOW THIS CHUNK --------------------- 
+# --------------------- INSERT RESPONSE BELOW THIS CHUNK --------------------- 
 ```
 
 
 
 ```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSEABOVE THIS CHUNK --------------------- 
+# --------------------- INSERT RESPONS EABOVE THIS CHUNK --------------------- 
 ```
 </div>
 
-## Quantities
+## Quantity Review
+
+### Quantity by WBS Element
 
 ```{r}
 # All WBS Elements
-csdr %>% 
+units_by_wbs <- csdr %>% 
   filter(UnitOfMeasure == "Units") %>% 
   pivot_wider(id_cols     = c(WBSElementID, WBSElementName),
               names_from  = c(Recurring_Nonrecurring, ToDate_AtCompletion),
               values_from = Value)
 
+units_by_wbs %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Units by WBS", 
+                 subtitle = NULL) %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_number(columns = c(3:ncol(units_by_wbs)), drop_trailing_zeros = TRUE)
+```
+
+### Quantity by WBS Element (Only If > 0)
+
+```{r}
 # Only WBS Element With a Units > 0
-csdr %>% 
+wbs_without_0_units <- csdr %>% 
   filter(UnitOfMeasure == "Units") %>% 
   pivot_wider(id_cols     = c(WBSElementID, WBSElementName),
               names_from  = c(Recurring_Nonrecurring, ToDate_AtCompletion),
               values_from = Value) %>% 
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
+
+wbs_without_0_units %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Units by WBS", 
+                 subtitle = "Includes Only WBS with Greather Than 0 Units") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_number(columns = c(3:ncol(wbs_without_0_units)), drop_trailing_zeros = TRUE)
 ```
 
 >**QUESTIONS FOR REVIEWER:** The reported "As Of Date" for this CSDR Submission is __`r ff$MetaData$"16 Report As Of"`__ and the reported latest contract modification is __`r ff$MetaData$"10b Latest Modification"`__.  
@@ -961,28 +1014,3 @@ Utilize the following directions to convert the Plan, 1921, and 1921-1 into the 
 -------------------------------------------------------------------------------
 # PowerPoint List
 
-1. Utilize cPet to confirm there are no critical errors.  
-1. Merge submission files into a tidy format.  
-1. Confirm quantities and reported CSDR price match the contract.  
-1. Confirm lowest level WBS elements units, hours, and costs are consistent with dictionary.  
-  * Are WBS with 0 units/hours/dollars reported and the dictionary says there is no SOW?
-  * Are there WBS with > 0 units/hours/dollars reported where the dictionary says there is SOW?
-1. Confirm units, hours, and dollars To Date vs. At Competition appears reasonable.  
-  * Are reported PctDollars or PctHours complete reasonable compared to program schedule, units DD-250’ed, etc.?  
-  * Are PctDollars significantly different than PctHours complete?  
-1. Confirm units/hours/dollars Nonrecurring vs. Recurring appears reasonable.
-  * Are material costs primarily recurring?  
-  * Is engineering labor primarily non-recurring?  
-1. Confirm labor rates by Functional Element appear reasonable.  
-  * Are the averages reasonable?  
-  * For common Functional Elements, are variances by WBS Element, Recurring vs. Nonrecurring, To Date vs. At Completion reasonable?  
-1. Confirm the overhead rate appear reasonable.
-  * Are they consistent from WBS element to element?  
-  * Is there value reasonable and/or check that it is close to their Forward Rate Pricing Agreement/Proposal values.
-9. Confirm recurring unit cost by WSB Element appear reasonable.  
-  * Are the averages reasonable?  
-  * Are averages To Date reasonably compared to EAC/FAC.  
-1. Do dictionary entries include the DID required info?  
-1. Do WBS element and submission remarks include the required info?  
-1. Are there any special requirements listed in the CSDR Plan that require checks?  
-1 .Are there any other data deliverables (e.g., a BOM) that need to be checked for consistency with the CSDR submission (or could provide additional explanation)?  
