@@ -1,13 +1,17 @@
 ---
 title: "CSDR Submission Import And Review Checklist"
-output: html_document
+output: 
+  html_document: 
+    toc: yes
+    toc_float: yes
+    fig_width: 10
+    number_sections: yes
+    df_print: default
+    toc_depth: 6
+    code_folding: hide
 editor_options: 
   chunk_output_type: console
 ---
-
-```{r eval=FALSE, include=FALSE}
-# Start css style declarations 
-```
 
 <style type="text/css">
 .main-container {
@@ -17,32 +21,14 @@ editor_options:
 }
 </style>
 
-<style>
-div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
-</style>
-
-```{r eval=FALSE, include=FALSE}
-# End css style declarations 
-```
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 # options(width = 115)
 
-options(tibble.print_max = Inf)
+# options(tibble.print_max = Inf)
 
-library(magrittr)
-library(dplyr)
-library(tidyr)
-library(stringr)
-library(wbstools)
-library(unpivotr)
-library(purrr)
-library(gt)
-
-source(here::here("R", "flat_file_class.R"))
-source(here::here("R", "read_flat_file.R"))
+source(here::here("R", "00_setup_csdr_submission_review.R"))
 ```
 
 # Introduction & Overview
@@ -57,6 +43,7 @@ source(here::here("R", "read_flat_file.R"))
 1. Confirm lowest level WBS elements units, hours, and costs are consistent with dictionary.  
    * Are WBS with 0 units/hours/dollars reported and the dictionary says there is no SOW?
    * Are there WBS with > 0 units/hours/dollars reported where the dictionary says there is SOW?
+1. Confirm average unit costs and hours by WBS element appear reasonable.
 1. Confirm units, hours, and dollars To Date vs. At Competition appears reasonable.  
    * Are reported PctDollars or PctHours complete reasonable compared to program schedule, units DD-250’ed, etc.?  
    * Are PctDollars significantly different than PctHours complete?  
@@ -77,152 +64,6 @@ source(here::here("R", "read_flat_file.R"))
 1. Are there any special requirements listed in the CSDR Plan that require checks?  
 1. Are there any other data deliverables (e.g., a BOM) that need to be checked for consistency with the CSDR submission (or could provide additional explanation)?  
 
-# Reading Data Into R
-
-## Reading the CSDR Submission Flat File{#read_flat_file}
-
-### Source File Path Info
-
-Provide the file name and path to the identified CSDR Flat File.  
-```{r}
-# Provide the file name (with extension) of the CSDR submission Flat File.
-flat_file_source_name <- "Flat_File_fake.xlsx"
-
-# Provide the path to the CSDR submission Flat File (do not include the 
-# file name or extension).
-flat_file_source_path <- here::here("inst", "extdata")
-```
-
-Provide the file name and path to the CSDR WBS Dictionary.  
-```{r}
-# Provide the filename (with extension) of the CSDR WBS Dictionary.
-dictionary_source_name <- "fake_dictionary.xlsx"
-
-# Provide the title of the worksheet the CSDR WBS Dictionary is found on.
-dictionary_worksheet_title <- "Sheet1"
-
-# Provide the path to the CSDR WBS Dictionary (do not include the filename
-# or extension).
-dictionary_source_path <- here::here("inst", "extdata")
-```
-
-### Identify if Hours and/or Dollars are in "Thousands"
-
-Indicate if the file was reported in thousands of hours and/or dollars^[Legacy CSDR requirements directed that hours and dollars be reported in 'thousands']. 
-```{r}
-# Were hours reported in 'thousands of hours'?
-hours_in_k <- TRUE
-
-# Were dollars reported in 'thousands of dollars'?
-dollars_in_k <- TRUE
-```
-
-### Read CSDR Flat File
-
-Read the CSDR Flat File into R, convert hours and dollars as necessary and perform other cleaning operations.  
-```{r}
-# Import the CSDR Flat File.  Keep an unmodified source copy in `ff_source`.
-ff_source <- read_flat_file(path =  paste0(flat_file_source_path, "/", flat_file_source_name))
-ff <- ff_source
-
-# Convert 'thousands of hours' to 'hours', if required.
-if (hours_in_k == TRUE) {
-  ff$Data <- ff$Data %>% 
-    mutate(Value = case_when(
-      UnitOfMeasure == "Hours" ~ Value * 1000,
-      TRUE ~ Value
-      ))
-}
-rm(hours_in_k)
-
-# Convert 'thousands of dollars' to 'dollars', if required.
-if (dollars_in_k == TRUE) {
-  ff$Data <- ff$Data %>% 
-    mutate(Value = case_when(
-      UnitOfMeasure == "Dollars" ~ Value * 1000,
-      TRUE                       ~ Value
-    ))
-}
-rm(dollars_in_k)
-
-# Convert WBSElementID into a `wbs` class object.
-
-# TODO: Need to modify read_flat_file() to import WBSElementID as a wbs (not fct) then we won't need to convert it back to char here.  Also have read_flat_file convert "1.0" to "1".
-ff$Data$WBSElementID <- as.character(ff$Data$WBSElementID)
-
-ff$Data <- ff$Data %>%
-  mutate(WBSElementID = case_when(
-    WBSElementID == "1.0" ~ "1",
-    TRUE ~ WBSElementID
-    ))
-
-ff$Data$WBSElementID <- as_wbs(ff$Data$WBSElementID)
-```
-
-### Clean CSDR Flat File Remarks (if required)
-
-If the submission includes remarks about hours or dollars being reported in 'thousands', it is a good idea to remove those remarks since that data as already been converted back to unit hours/dollars (otherwise we might forget later and then get confused when we see the remark).  This code likely needs to be reviewed and/or likely need to be tailored to work with each submission.
-```{r}
-#################### REVIEW THIS CODE FOR EACH SUBMISSION ####################
-# Remove the WBS Element remark(s) about hours or dollars being reported in
-# 'thousands' since that data has been replaced/cleaned.
-
-
-```
-
-## Reading the CSDR Dictionary 
-
-```{r}
-# Import the CSDR WBS Dictionary.  Keep an unmodified copy in `dictionary_source`,
-dictionary_source <- tidyxl::xlsx_cells(path =  paste0(dictionary_source_path, "/", dictionary_source_name),
-                                 sheets = dictionary_worksheet_title)
-dictionary <- dictionary_source
-```
-
-### Clean and Tidy CSDR WBS Dictionary (if required)
-
-```{r}
-#################### REVIEW THIS CODE FOR EACH SUBMISSION ####################
-# Clean and munge the CSDR WBS Dictionary.
-# TODO: Provide more description on how to munge a dictionary so that it can be joined with the Flat File.
-
-dictionary <- dictionary %>% 
-  rectify() %>% 
-  select(-`row/col`) %>%
-  rlang::set_names(., nm = .[1, ]) %>%
-  slice(-1) %>%
-  janitor::clean_names()
-
-# Rename the source data columns with what the rest of the script is expecting.
-dictionary <- dictionary %>% 
-  rename("WBSElementID" = wbs_code,
-         "WBSElementName" = wbs_reporting_elements,
-         "WBSDictionaryDefinitions" = cwbs_definition)
-
-dictionary$WBSElementName <- dictionary$WBSElementName %>% str_trim()
-
-# Convert the WBSElementID to the `wbs` class object.
-dictionary$WBSElementID <- as_wbs(dictionary$WBSElementID)
-```
-
-## Combined CSDR Flat File Submission and Dictionary
-
-Now we combine the info in the CSDR Flat File with the Dictionary to create a single table with all of the information in one spot. 
-```{r}
-# Combine the CSDR Flat File with the Dictionary using the WBSElementID as the common field.
-csdr <- left_join(ff$Data, dictionary, by = c("WBSElementID"))
-
-# Add a column to identify if each WBSElementID is a lowest level WBS or not.
-csdr <- left_join(csdr, {wbs_expand(csdr) %>% distinct(wbs, is_lowest)},
-                   by = c("WBSElementID" = "wbs"))
-
-csdr <- csdr %>% select(-WBSElementName.y)
-
-csdr <- csdr %>% rename("WBSElementName" = WBSElementName.x)
-```
-
-We have created a data frame called `csdr` which includes all of the information provided in a DD Form 1921-1 and the CSDR WSB Dictionary.  We will use this `csdr` object to perform various reviews of the provided submission.  
-
 # CSDR Submission Review
 
 ## Dictionary vs. Submission 
@@ -231,7 +72,7 @@ We have created a data frame called `csdr` which includes all of the information
 
 The following is a table of lowest level WBS elements that have no reported costs, hours, and units.
 
-```{r}
+```{r wbs_with_no_cost_hours_units}
 wbs_with_no_cost_hours_units <- csdr %>% 
   filter(is_lowest == "TRUE",
          !is.na(FunctionalCategory)) %>%
@@ -260,25 +101,11 @@ wbs_with_no_cost_hours_units %>%
 2. Does the dictionary entry for each WBS say either "NA" or that no scope of work is on contract for each element?  
 3. Are their any dictionary entries that provide a technical description or otherwise indicate/imply that the WBS Element should have included some units, costs, and/or hours?  
 
-<div class = "blue">
-
----------------------------- **REVIEWER RESPONSE** ----------------------------
-```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSE BELOW THIS CHUNK --------------------- 
-```
-
-
-
-```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSE ABOVE THIS CHUNK --------------------- 
-```
-</div>
-
 ### WBS Elements With Units, Dollars, or Hours
 
 The following is a table of lowest level WBS elements that have at least reported costs, hours, or units.
 
-```{r}
+```{r wbs_with_cost_hours_units}
 wbs_with_cost_hours_units <- csdr %>% 
   filter(is_lowest == "TRUE",
          !is.na(FunctionalCategory)) %>%
@@ -304,28 +131,11 @@ wbs_with_cost_hours_units %>%
 >**QUESTIONS FOR REVIEWER:** The flip side of "dictionary entries with no units, hours, dollars" is a dictionary entry that has units, hours, or dollars but says that it should not.  
 1. Are any of the above WBS dictionary "NA" or indicate that scope of work is not awarded or that a WBS element is not applicable to the design?   
 
-<style>
-div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
-</style>
-<div class = "blue">
-
----------------------------- **REVIEWER RESPONSE** ----------------------------
-```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSE BELOW THIS CHUNK --------------------- 
-```
-
-
-
-```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSE ABOVE THIS CHUNK --------------------- 
-```
-</div>
-
 ## Quantity Review
 
 ### Quantity by WBS Element
 
-```{r}
+```{r units_by_wbs}
 # All WBS Elements
 units_by_wbs <- csdr %>% 
   filter(UnitOfMeasure == "Units") %>% 
@@ -343,21 +153,21 @@ units_by_wbs %>%
 
 ### Quantity by WBS Element (Only If > 0)
 
-```{r}
+```{r units_by_wbs_nonzero}
 # Only WBS Element With a Units > 0
-wbs_without_0_units <- csdr %>% 
+units_by_wbs_nonzero <- csdr %>% 
   filter(UnitOfMeasure == "Units") %>% 
   pivot_wider(id_cols     = c(WBSElementID, WBSElementName),
               names_from  = c(Recurring_Nonrecurring, ToDate_AtCompletion),
               values_from = Value) %>% 
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
 
-wbs_without_0_units %>% 
+units_by_wbs_nonzero %>% 
   gt::gt() %>% 
   gt::tab_header(title = "Units by WBS", 
                  subtitle = "Includes Only WBS with Greater Than 0 Units") %>% 
   gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_number(columns = c(3:ncol(wbs_without_0_units)), drop_trailing_zeros = TRUE)
+  gt::fmt_number(columns = c(3:ncol(units_by_wbs_nonzero)), drop_trailing_zeros = TRUE)
 ```
 
 >**QUESTIONS FOR REVIEWER:** The reported "As Of Date" for this CSDR Submission is __`r ff$MetaData$"16 Report As Of"`__ and the reported latest contract modification is __`r ff$MetaData$"10b Latest Modification"`__.  
@@ -365,114 +175,69 @@ Given those programmatic considerations...
 1. Are the reported `Units To Date` reasonable considering the contract's delivery and/or production schedule?  
 2. Are the reported `Units At Completion` equal to what was on contract on the as of date?  
 
-<style>
-div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
-</style>
-<div class = "blue">
 
----------------------------- **REVIEWER RESPONSE** ----------------------------
-```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSE BELOW THIS CHUNK --------------------- 
-```
-
-
-
-```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSE ABOVE THIS CHUNK --------------------- 
-```
-</div>
-
-## Percent Complete (PctComplete) Review
-
-### Hours
-
-#### Nonrecurring
-
-The following table identifies the number of Nonrecurring Hours To Date and At Completion for only the lowest level WBS elements.
-
-```{r}
-PctComplete_Hours_Nonrecurring <- csdr %>% 
-  filter(is_lowest              == "TRUE",
-         UnitOfMeasure          == "Hours",
-         Recurring_Nonrecurring == "Nonrecurring",
-         !is.na(FunctionalElement)) %>% 
-  pivot_wider(id_cols     = c(WBSElementID,
-                              WBSElementName,
-                              FunctionalCategory,
-                              FunctionalElement),
-              names_from  = c(ToDate_AtCompletion),
-              values_from = Value,
-              values_fn   = list(Value = sum)) %>% 
-  mutate(PctComplete = ToDate / AtCompletion,
-         PctError    = ifelse(PctComplete > 1, "CRITICAL ERROR", "-")) %>% 
-  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
-  group_by(WBSElementID, WBSElementName)
-
-PctComplete_Hours_Nonrecurring %>% 
-  gt::gt() %>% 
-  gt::tab_header(title = "Nonrecurring Hours To Date vs. At Completion, Arranged by WBS", 
-                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
-  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_number(columns = c(5:(ncol(PctComplete_Hours_Nonrecurring) - 2)), drop_trailing_zeros = TRUE) %>% 
-  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
-
-PctComplete_Hours_Nonrecurring %>% 
-  select(-FunctionalCategory) %>% 
-  gt::gt(groupname_col = "FunctionalElement") %>% 
-  gt::tab_header(title = "Nonrecurring Hours To Date vs. At Completion, Arranged by FunctionalElement", 
-                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
-  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_number(columns = c(4:(ncol(PctComplete_Hours_Nonrecurring) - 2)), drop_trailing_zeros = TRUE) %>% 
-  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
-```
-
-#### Recurring
-
-The following table identifies the number of Recurring Hours To Date and At Completion for only the lowest level WBS elements.  
-
-```{r}
-PctComplete_Hours_Recurring <- csdr %>% 
-  filter(is_lowest              == "TRUE",
-         UnitOfMeasure          == "Hours",
-         Recurring_Nonrecurring == "Recurring",
-         !is.na(FunctionalElement)) %>% 
-  pivot_wider(id_cols     = c(WBSElementID,
-                              WBSElementName,
-                              FunctionalCategory,
-                              FunctionalElement),
-              names_from  = c(ToDate_AtCompletion),
-              values_from = Value,
-              values_fn   = list(Value = sum)) %>% 
-  mutate(PctComplete = ToDate / AtCompletion,
-         PctError    = ifelse(PctComplete > 1, "CRITICAL ERROR", "-")) %>% 
-  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
-  group_by(WBSElementID, WBSElementName)
-
-PctComplete_Hours_Recurring %>% 
-  gt::gt() %>% 
-  gt::tab_header(title = "Recurring Hours To Date vs. At Completion, Arranged by WBS", 
-                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
-  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_number(columns = c(5:(ncol(PctComplete_Hours_Recurring) - 2)), drop_trailing_zeros = TRUE) %>% 
-  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
-
-PctComplete_Hours_Recurring %>% 
-  select(-FunctionalCategory) %>% 
-  gt::gt(groupname_col = "FunctionalElement") %>% 
-  gt::tab_header(title = "Recurring Hours To Date vs. At Completion, Sorted by FunctionalElement", 
-                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
-  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_number(columns = c(4:(ncol(PctComplete_Hours_Recurring) - 2)), drop_trailing_zeros = TRUE) %>% 
-  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
-```
+## Unit Review
 
 ### Dollars
 
 #### Nonrecurring
 
+#### Recurring
+
+### Hours
+
+#### Nonrecurring
+
+#### Recurring
+
+## Percent Complete
+
+### Dollars
+
+#### Total
+
+The following table identifies the number of Hours To Date and At Completion for only the lowest level WBS elements.
+
+```{r PctComplete_Dollars}
+PctComplete_Dollars <- csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Dollars",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(PctComplete = ToDate / AtCompletion,
+         PctError    = ifelse(PctComplete > 1, "CRITICAL ERROR", "-")) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  group_by(WBSElementID, WBSElementName)
+
+PctComplete_Dollars %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Dollars To Date vs. At Completion, Arranged by WBS", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Dollars") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_number(columns = c(5:(ncol(PctComplete_Dollars) - 2)), drop_trailing_zeros = TRUE) %>% 
+  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
+
+PctComplete_Dollars %>% 
+  select(-FunctionalCategory) %>% 
+  gt::gt(groupname_col = "FunctionalElement") %>% 
+  gt::tab_header(title = "Dollars To Date vs. At Completion, Sorted by FunctionalElement", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Dollars") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_number(columns = c(4:(ncol(PctComplete_Dollars) - 2)), drop_trailing_zeros = TRUE) %>% 
+  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
+```
+
+#### Nonrecurring
+
 The following table identifies the number of Nonrecurring Hours To Date and At Completion for only the lowest level WBS elements.
 
-```{r}
+```{r PctComplete_Dollars_Nonrecurring}
 PctComplete_Dollars_Nonrecurring <- csdr %>% 
   filter(is_lowest              == "TRUE",
          UnitOfMeasure          == "Dollars",
@@ -512,7 +277,7 @@ PctComplete_Dollars_Nonrecurring %>%
 
 The following table identifies the number of Recurring Hours To Date and At Completion for only the lowest level WBS elements.
 
-```{r}
+```{r PctComplete_Dollars_Recurring}
 PctComplete_Dollars_Recurring <- csdr %>% 
   filter(is_lowest              == "TRUE",
          UnitOfMeasure          == "Dollars",
@@ -548,14 +313,185 @@ PctComplete_Dollars_Recurring %>%
   gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
 ```
 
-### Hours vs. Dollars
+### Hours
+
+#### Total
+
+The following table identifies the number of Hours To Date and At Completion for only the lowest level WBS elements.
+
+```{r PctComplete_Hours}
+PctComplete_Hours <- csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Hours",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(PctComplete = ToDate / AtCompletion,
+         PctError    = ifelse(PctComplete > 1, "CRITICAL ERROR", "-")) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  group_by(WBSElementID, WBSElementName)
+
+PctComplete_Hours %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Hours To Date vs. At Completion, Arranged by WBS", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_number(columns = c(5:(ncol(PctComplete_Hours) - 2)), drop_trailing_zeros = TRUE) %>% 
+  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
+
+PctComplete_Hours %>% 
+  select(-FunctionalCategory) %>% 
+  gt::gt(groupname_col = "FunctionalElement") %>% 
+  gt::tab_header(title = "Hours To Date vs. At Completion, Arranged by FunctionalElement", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_number(columns = c(4:(ncol(PctComplete_Hours) - 2)), drop_trailing_zeros = TRUE) %>% 
+  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
+```
 
 #### Nonrecurring
 
+The following table identifies the number of Nonrecurring Hours To Date and At Completion for only the lowest level WBS elements.
+
+```{r PctComplete_Hours_Nonrecurring}
+PctComplete_Hours_Nonrecurring <- csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Hours",
+         Recurring_Nonrecurring == "Nonrecurring",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(PctComplete = ToDate / AtCompletion,
+         PctError    = ifelse(PctComplete > 1, "CRITICAL ERROR", "-")) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  group_by(WBSElementID, WBSElementName)
+
+PctComplete_Hours_Nonrecurring %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Nonrecurring Hours To Date vs. At Completion, Arranged by WBS", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_number(columns = c(5:(ncol(PctComplete_Hours_Nonrecurring) - 2)), drop_trailing_zeros = TRUE) %>% 
+  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
+
+PctComplete_Hours_Nonrecurring %>% 
+  select(-FunctionalCategory) %>% 
+  gt::gt(groupname_col = "FunctionalElement") %>% 
+  gt::tab_header(title = "Nonrecurring Hours To Date vs. At Completion, Arranged by FunctionalElement", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_number(columns = c(4:(ncol(PctComplete_Hours_Nonrecurring) - 2)), drop_trailing_zeros = TRUE) %>% 
+  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
+```
+
+#### Recurring
+
+The following table identifies the number of Recurring Hours To Date and At Completion for only the lowest level WBS elements.  
+
+```{r PctComplete_Hours_Recurring}
+PctComplete_Hours_Recurring <- csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Hours",
+         Recurring_Nonrecurring == "Recurring",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(PctComplete = ToDate / AtCompletion,
+         PctError    = ifelse(PctComplete > 1, "CRITICAL ERROR", "-")) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  group_by(WBSElementID, WBSElementName)
+
+PctComplete_Hours_Recurring %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Recurring Hours To Date vs. At Completion, Arranged by WBS", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_number(columns = c(5:(ncol(PctComplete_Hours_Recurring) - 2)), drop_trailing_zeros = TRUE) %>% 
+  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
+
+PctComplete_Hours_Recurring %>% 
+  select(-FunctionalCategory) %>% 
+  gt::gt(groupname_col = "FunctionalElement") %>% 
+  gt::tab_header(title = "Recurring Hours To Date vs. At Completion, Sorted by FunctionalElement", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_number(columns = c(4:(ncol(PctComplete_Hours_Recurring) - 2)), drop_trailing_zeros = TRUE) %>% 
+  gt::fmt_percent(columns = vars(PctComplete), decimals = 1, drop_trailing_zeros = TRUE)
+```
+
+### Hours vs. Dollars
+
+#### Total
+
 The following table compares "HoursPctCompete" against "DollarsPctComplete" and is arranged in order of highest to smallest delta between those values. 
 
-```{r}
-PctComplete_Hours_vs_Dollars_Nonrecurring <- csdr %>% 
+```{r PctComplete_HvD}
+PctComplete_HvD <- csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Hours",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(HoursPctComplete = ToDate / AtCompletion) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  select(-ToDate, -AtCompletion) %>% 
+  
+  left_join(., {
+
+csdr %>% 
+  filter(is_lowest              == "TRUE",
+         UnitOfMeasure          == "Dollars",
+         !is.na(FunctionalElement)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName,
+                              FunctionalCategory,
+                              FunctionalElement),
+              names_from  = c(ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  mutate(DollarsPctComplete = ToDate / AtCompletion) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  select(-ToDate, -AtCompletion)
+},
+by = c("WBSElementID", "WBSElementName", "FunctionalCategory", "FunctionalElement")) %>% 
+  mutate(Delta = HoursPctComplete - DollarsPctComplete) %>% 
+  filter(Delta != 0) %>% 
+  arrange(desc(abs(Delta)))
+
+PctComplete_HvD  %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Hours Complete vs. Dollars Complete, Arranged by Decending Delta", 
+                 subtitle = "Includes Only Lowest Level WBS") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_percent(columns = vars(HoursPctComplete, DollarsPctComplete, Delta), decimals = 1, drop_trailing_zeros = TRUE)
+```
+
+#### Nonrecurring
+
+The following table compares Nonrecurring "HoursPctCompete" against Nonrecurring "DollarsPctComplete" and is arranged in order of highest to smallest delta between those values. 
+
+```{r PctComplete_HvD_Nonrecurring}
+PctComplete_HvD_Nonrecurring <- csdr %>% 
   filter(is_lowest              == "TRUE",
          UnitOfMeasure          == "Hours",
          Recurring_Nonrecurring == "Nonrecurring",
@@ -594,7 +530,7 @@ by = c("WBSElementID", "WBSElementName", "FunctionalCategory", "FunctionalElemen
   filter(Delta != 0) %>% 
   arrange(desc(abs(Delta)))
 
-PctComplete_Hours_vs_Dollars_Nonrecurring  %>% 
+PctComplete_HvD_Nonrecurring  %>% 
   gt::gt() %>% 
   gt::tab_header(title = "Nonrecurring Hours Complete vs. Dollars Complete, Arranged by Decending Delta", 
                  subtitle = "Includes Only Lowest Level WBS") %>% 
@@ -604,10 +540,10 @@ PctComplete_Hours_vs_Dollars_Nonrecurring  %>%
 
 #### Recurring
 
-The following table compares "HoursPctCompete" against "DollarsPctComplete" and is arranged in order of highest to smallest delta between those values. 
+The following table compares Recurring "HoursPctCompete" against Recurring "DollarsPctComplete" and is arranged in order of highest to smallest delta between those values. 
 
-```{r}
-PctComplete_Hours_vs_Dollars_Recurring <- csdr %>% 
+```{r PctComplete_HvD_Recurring}
+PctComplete_HvD_Recurring <- csdr %>% 
   filter(is_lowest              == "TRUE",
          UnitOfMeasure          == "Hours",
          Recurring_Nonrecurring == "Recurring",
@@ -646,7 +582,7 @@ by = c("WBSElementID", "WBSElementName", "FunctionalCategory", "FunctionalElemen
   filter(Delta != 0) %>% 
   arrange(desc(abs(Delta)))
 
-PctComplete_Hours_vs_Dollars_Recurring %>% 
+PctComplete_HvD_Recurring %>% 
   gt::gt() %>% 
   gt::tab_header(title = "Recurring Hours Complete vs. Dollars Complete, Arranged by Decending Delta", 
                  subtitle = "Includes Only Lowest Level WBS") %>% 
@@ -660,35 +596,56 @@ Given those programmatic considerations...
 2. Are the observed percent complete (`PctComplete`) values reasonable?  
 3. Are there any WBS elements which have a large `Delta` between `HoursPctComplete` and `DollarsPctComplete` (there is no rule of for how much of a `Delta` is too much but more than a +/- 10% difference is likely worth consideration).
 
-<style>
-div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
-</style>
-<div class = "blue">
-
----------------------------- **REVIEWER RESPONSE** ----------------------------
-```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSE BELOW THIS CHUNK --------------------- 
-```
-
-
-
-```{r eval=FALSE, include=FALSE}
-# --------------------- INSERT RESPONSE ABOVE THIS CHUNK --------------------- 
-```
-</div>
-
 ## Average Labor Rates
 
 ### By Functional Element
 
 #### To Date
 
+##### Total
+
+The following table identifies the average labor rate To Date by FunctionalElement for lowest level WBS elements.
+
+```{r laborRate_ToDate}
+laborRate_ToDate <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         ToDate_AtCompletion == "ToDate",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`Direct Engineering`     = sum(`Direct Engineering Labor_Dollars` / `Direct Engineering Labor_Hours`, na.rm = TRUE),
+         `Direct Tooling`         = sum(`Direct Tooling Labor_Dollars` / `Direct Tooling Labor_Hours`, na.rm = TRUE),
+         `Direct Quality Control` = sum(`Direct Quality Control Labor_Dollars` / `Direct Quality Control Labor_Hours`, na.rm = TRUE),
+         `Direct Manufacturing`   = sum(`Direct Manufacturing Labor_Dollars` / `Direct Manufacturing Labor_Hours`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `Direct Engineering`,
+         `Direct Tooling`,
+         `Direct Quality Control`,
+         `Direct Manufacturing`) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  ungroup()
+
+laborRate_ToDate %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Average Labor Rate To Date by Functional Element", 
+                 subtitle = "Includes Only Lowest Level WBS with Reported Hours and Dollars") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_currency(columns = c(3:ncol(laborRate_ToDate)))
+```
+
 ##### Nonrecurring
 
 The following table identifies the average nonrecurring labor rate To Date by FunctionalElement for lowest level WBS elements.
 
-```{r}
-laborRate_Nonrecurring_ToDate <- csdr %>% 
+```{r laborRate_ToDate_Nonrecurring}
+laborRate_ToDate_Nonrecurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
          ToDate_AtCompletion == "ToDate",
@@ -714,20 +671,20 @@ laborRate_Nonrecurring_ToDate <- csdr %>%
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
   ungroup()
 
-laborRate_Nonrecurring_ToDate %>% 
+laborRate_ToDate_Nonrecurring %>% 
   gt::gt() %>% 
   gt::tab_header(title = "Average Nonrecurring Labor Rate To Date by Functional Element", 
                  subtitle = "Includes Only Lowest Level WBS with Reported Hours and Dollars") %>% 
   gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_currency(columns = c(3:ncol(laborRate_Nonrecurring_ToDate)))
+  gt::fmt_currency(columns = c(3:ncol(laborRate_ToDate_Nonrecurring)))
 ```
 
 ##### Recurring
 
 The following table identifies the average recurring labor rate To Date by FunctionalElement for lowest level WBS elements.
 
-```{r}
-laborRate_Recurring_ToDate <- csdr %>% 
+```{r laborRate_ToDate_Recurring}
+laborRate_ToDate_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
          ToDate_AtCompletion == "ToDate",
@@ -753,22 +710,60 @@ laborRate_Recurring_ToDate <- csdr %>%
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
   ungroup()
 
-laborRate_Recurring_ToDate %>% 
+laborRate_ToDate_Recurring %>% 
   gt::gt() %>% 
   gt::tab_header(title = "Average Recurring Labor Rate To Date by Functional Element", 
                  subtitle = "Includes Only Lowest Level WBS with Reported Hours and Dollars") %>% 
   gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_currency(columns = c(3:ncol(laborRate_Recurring_ToDate)))
+  gt::fmt_currency(columns = c(3:ncol(laborRate_ToDate_Recurring)))
 ```
 
 #### At Completion
+
+##### Total
+
+The following table identifies the average nonrecurring labor rate AtCompletion by FunctionalElement for lowest level WBS elements.
+
+```{r laborRate_AtCompletion}
+laborRate_AtCompletion <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         ToDate_AtCompletion == "AtCompletion",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`Direct Engineering`     = sum(`Direct Engineering Labor_Dollars` / `Direct Engineering Labor_Hours`, na.rm = TRUE),
+         `Direct Tooling`         = sum(`Direct Tooling Labor_Dollars` / `Direct Tooling Labor_Hours`, na.rm = TRUE),
+         `Direct Quality Control` = sum(`Direct Quality Control Labor_Dollars` / `Direct Quality Control Labor_Hours`, na.rm = TRUE),
+         `Direct Manufacturing`   = sum(`Direct Manufacturing Labor_Dollars` / `Direct Manufacturing Labor_Hours`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `Direct Engineering`,
+         `Direct Tooling`,
+         `Direct Quality Control`,
+         `Direct Manufacturing`) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  ungroup()
+
+laborRate_AtCompletion %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Average Labor Rate At Completion by Functional Element", 
+                 subtitle = "Includes Only Lowest Level WBS with Reported Hours and Dollars") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_currency(columns = c(3:ncol(laborRate_AtCompletion)))
+```
 
 ##### Nonrecurring
 
 The following table identifies the average nonrecurring labor rate AtCompletion by FunctionalElement for lowest level WBS elements.
 
-```{r}
-laborRate_Nonrecurring_AtCompletion <- csdr %>% 
+```{r laborRate_AtCompletion_Nonrecurring}
+laborRate_AtCompletion_Nonrecurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
          ToDate_AtCompletion == "AtCompletion",
@@ -794,20 +789,20 @@ laborRate_Nonrecurring_AtCompletion <- csdr %>%
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
   ungroup()
 
-laborRate_Nonrecurring_AtCompletion %>% 
+laborRate_AtCompletion_Nonrecurring %>% 
   gt::gt() %>% 
   gt::tab_header(title = "Average Nonrecurring Labor Rate At Completion by Functional Element", 
                  subtitle = "Includes Only Lowest Level WBS with Reported Hours and Dollars") %>% 
   gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_currency(columns = c(3:ncol(laborRate_Nonrecurring_AtCompletion)))
+  gt::fmt_currency(columns = c(3:ncol(laborRate_AtCompletion_Nonrecurring)))
 ```
 
 ##### Recurring
 
 The following table identifies the average recurring labor rate At Completion by Functional Element for lowest level WBS elements.
 
-```{r}
-laborRate_Recurring_AtCompletion <- csdr %>% 
+```{r laborRate_AtCompletion_Recurring}
+laborRate_AtCompletion_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
          ToDate_AtCompletion == "AtCompletion",
@@ -833,21 +828,57 @@ laborRate_Recurring_AtCompletion <- csdr %>%
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
   ungroup()
 
-laborRate_Recurring_AtCompletion %>% 
+laborRate_AtCompletion_Recurring %>% 
   gt::gt() %>% 
   gt::tab_header(title = "Average Recurring Labor Rate At Completion by Functional Element", 
                  subtitle = "Includes Only Lowest Level WBS with Reported Hours and Dollars") %>% 
   gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_currency(columns = c(3:ncol(laborRate_Recurring_AtCompletion)))
+  gt::fmt_currency(columns = c(3:ncol(laborRate_AtCompletion_Recurring)))
 ```
 
 ### Direct Engineering Labor Rate To Date vs. At Completion
+
+#### Total
+
+The following table identifies the average Direct Engineering labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r laborRate_Eng}
+laborRate_Eng <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Direct Engineering Labor_Dollars_ToDate` / `Direct Engineering Labor_Hours_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Direct Engineering Labor_Dollars_AtCompletion` / `Direct Engineering Labor_Hours_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta)) %>% 
+  ungroup()
+
+laborRate_Eng %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Average Direct Engineering Labor Rate To Date vs. At Completion, Arranged by Decending Delta", 
+                 subtitle = "Includes Only Lowest Level WBS with Reported Hours and Dollars") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_currency(columns = c(3:ncol(laborRate_Eng)))
+```
 
 #### Nonrecurring
 
 The following table identifies the average Nonrecurring Direct Engineering labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r laborRate_Eng_Nonrecurring}
 laborRate_Eng_Nonrecurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -884,8 +915,8 @@ laborRate_Eng_Nonrecurring %>%
 
 The following table identifies the average Recurring Direct Engineering labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
-laborRate_Eng_Nonrecurring <- csdr %>% 
+```{r laborRate_Eng_Recurring}
+laborRate_Eng_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
          Recurring_Nonrecurring == "Recurring",
@@ -919,11 +950,47 @@ laborRate_Eng_Recurring %>%
 
 ### Direct Tooling Labor Rate To Date vs. At Completion
 
+#### Total
+
+The following table identifies the average Direct Quality Control labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r laborRate_Tool}
+laborRate_Tool <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Direct Tooling Labor_Dollars_ToDate` / `Direct Tooling Labor_Hours_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Direct Tooling Labor_Dollars_AtCompletion` / `Direct Tooling Labor_Hours_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta)) %>% 
+  ungroup()
+
+laborRate_Tool %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Average Direct Tooling Labor Rate To Date vs. At Completion, Arranged by Decending Delta", 
+                 subtitle = "Includes Only Lowest Level WBS with Reported Hours and Dollars") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_currency(columns = c(3:ncol(laborRate_Tool)))
+```
+
 #### Nonrecurring
 
 The following table identifies the average Nonrecurring Direct Quality Control labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r laborRate_Tool_Nonrecurring}
 laborRate_Tool_Nonrecurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -956,11 +1023,11 @@ laborRate_Tool_Nonrecurring %>%
   gt::fmt_currency(columns = c(3:ncol(laborRate_Tool_Nonrecurring)))
 ```
 
-#### Nonrecurring
+#### Recurring
 
-The following table identifies the average Nonrecurring Direct Quality Control labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+The following table identifies the average Recurring Direct Quality Control labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r laborRate_Tool_Recurring}
 laborRate_Tool_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -995,11 +1062,47 @@ laborRate_Tool_Recurring %>%
 
 ### Direct Quality Control Labor Rate To Date vs. At Completion
 
+#### Total
+
+The following table identifies the average Direct Quality Control labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r laborRate_Quality}
+laborRate_Quality <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Direct Quality Control Labor_Dollars_ToDate` / `Direct Quality Control Labor_Hours_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Direct Quality Control Labor_Dollars_AtCompletion` / `Direct Quality Control Labor_Hours_AtCompletion`, na.rm = TRUE),
+         Delta = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta)) %>% 
+  ungroup()
+
+laborRate_Quality %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Average Direct Quality Control Labor Rate To Date vs. At Completion, Arranged by Decending Delta", 
+                 subtitle = "Includes Only Lowest Level WBS with Reported Hours and Dollars") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_currency(columns = c(3:ncol(laborRate_Quality)))
+```
+
 #### Nonrecurring
 
 The following table identifies the average Nonrecurring Direct Quality Control labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r laborRate_Quality_Nonrecurring}
 laborRate_Quality_Nonrecurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -1036,7 +1139,7 @@ laborRate_Quality_Nonrecurring %>%
 
 The following table identifies the average Recurring Direct Quality Control labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r laborRate_Quality_Recurring}
 laborRate_Quality_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -1071,11 +1174,47 @@ laborRate_Quality_Recurring %>%
 
 ### Manufacturing Labor Rate To Date vs. At Completion
 
+#### Total
+
+The following table identifies the average Direct Manufacturing labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r laborRate_Manf}
+laborRate_Manf <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Direct Manufacturing Labor_Dollars_ToDate` / `Direct Manufacturing Labor_Hours_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Direct Manufacturing Labor_Dollars_AtCompletion` / `Direct Manufacturing Labor_Hours_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta)) %>% 
+  ungroup()
+
+laborRate_Manf %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Average Direct Manufacturing Labor Rate To Date vs. At Completion, Arranged by Decending Delta", 
+                 subtitle = "Includes Only Lowest Level WBS with Reported Hours and Dollars") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_currency(columns = c(3:ncol(laborRate_Manf)))
+```
+
 #### Nonrecurring
 
 The following table identifies the average Nonrecurring Direct Manufacturing labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r laborRate_Manf_Nonrecurring}
 laborRate_Manf_Nonrecurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -1112,7 +1251,7 @@ laborRate_Manf_Nonrecurring %>%
 
 The following table identifies the average Recurring Direct Manufacturing labor rate To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r laborRate_Manf_Recurring}
 laborRate_Manf_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -1145,18 +1284,63 @@ laborRate_Manf_Recurring %>%
   gt::fmt_currency(columns = c(3:ncol(laborRate_Manf_Recurring)))
 ```
 
-## Average Overhead Factors
+## Overhead Factors
 
-### Average Overhead Factor by Functional Element
+### Overhead Factor by Functional Element
 
 #### To Date
+
+##### Total
+
+The following table identifies the average overhead factor To Date by FunctionalElement for lowest level WBS elements.
+
+```{r ovhFct_ToDate}
+ovhFct_ToDate <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         ToDate_AtCompletion == "ToDate",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`Engineering Overhead Factor` = 
+           sum(`Engineering Overhead_Dollars` / `Direct Engineering Labor_Dollars`, 
+               na.rm = TRUE),
+         `Manufacturing Operations Overhead Factor` = 
+           sum(`Manufacturing Operations Overhead_Dollars` / `Direct Manufacturing Labor_Dollars`,
+               na.rm = TRUE),
+         `Material Handling/Overhead Factor` = 
+           sum((`Raw Material_Dollars`
+                + `Purchased Parts_Dollars`
+                + `Purchased Equipment_Dollars`) 
+                / `Material Handling/Overhead_Dollars`,
+               na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `Engineering Overhead Factor`,
+         `Manufacturing Operations Overhead Factor`,
+         `Material Handling/Overhead Factor`) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  ungroup()
+
+ovhFct_ToDate %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Overhead Factor To Date by WBS Element", 
+                 subtitle = "Includes Only Lowest Level WBS with Reported Dollars") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_percent(columns = c(3:ncol(ovhFct_ToDate)), decimals = 1)
+```
 
 ##### Nonrecurring
 
 The following table identifies the average Nonrecurring overhead factor To Date by FunctionalElement for lowest level WBS elements.
 
-```{r}
-ovhFct_Nonrecurring_ToDate <- csdr %>% 
+```{r ovhFct_ToDate_Nonrecurring}
+ovhFct_ToDate_Nonrecurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
          Recurring_Nonrecurring == "Nonrecurring",
@@ -1189,20 +1373,20 @@ ovhFct_Nonrecurring_ToDate <- csdr %>%
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
   ungroup()
 
-ovhFct_Nonrecurring_ToDate %>% 
+ovhFct_ToDate_Nonrecurring %>% 
   gt::gt() %>% 
-  gt::tab_header(title = "Nonrecurring Overhead Factor To Date by WBS Element", 
+  gt::tab_header(title = "Nonrecurring Overhead Factors To Date by WBS Element", 
                  subtitle = "Includes Only Lowest Level WBS with Reported Dollars") %>% 
   gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_percent(columns = c(3:ncol(ovhFct_Nonrecurring_ToDate)), decimals = 1)
+  gt::fmt_percent(columns = c(3:ncol(ovhFct_ToDate_Nonrecurring)), decimals = 1)
 ```
 
 ##### Recurring
 
 The following table identifies the average Recurring overhead factor To Date by FunctionalElement for lowest level WBS elements.
 
-```{r}
-ovhFct_Recurring_ToDate <- csdr %>% 
+```{r ovhFct_ToDate_Recurring}
+ovhFct_ToDate_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
          Recurring_Nonrecurring == "Recurring",
@@ -1235,26 +1419,25 @@ ovhFct_Recurring_ToDate <- csdr %>%
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
   ungroup()
 
-ovhFct_Recurring_ToDate %>% 
+ovhFct_ToDate_Recurring %>% 
   gt::gt() %>% 
-  gt::tab_header(title = "Recurring Overhead Factor To Date by WBS Element", 
+  gt::tab_header(title = "Recurring Overhead Factors To Date by WBS Element", 
                  subtitle = "Includes Only Lowest Level WBS with Reported Dollars") %>% 
   gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_percent(columns = c(3:ncol(ovhFct_Recurring_ToDate)), decimals = 1)
+  gt::fmt_percent(columns = c(3:ncol(ovhFct_ToDate_Recurring)), decimals = 1)
 ```
 
 #### At Completion
 
-##### Nonrecurring
+##### Total
 
-The following table identifies the average Nonrecurring overhead factor At Completion by FunctionalElement for lowest level WBS elements.
+The following table identifies the average overhead factor At Completion by FunctionalElement for lowest level WBS elements.
 
-```{r}
-ovhFct_Nonrecurring_AtCompletion <- csdr %>% 
+```{r ovhFct_AtCompletion}
+ovhFct_AtCompletion <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
-         Recurring_Nonrecurring == "AtCompletion",
-         ToDate_AtCompletion == "ToDate",
+         ToDate_AtCompletion == "AtCompletion",
          !is.na(FunctionalCategory)) %>% 
   pivot_wider(id_cols     = c(WBSElementID,
                               WBSElementName),
@@ -1283,20 +1466,66 @@ ovhFct_Nonrecurring_AtCompletion <- csdr %>%
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
   ungroup()
 
-ovhFct_Nonrecurring_AtCompletion %>% 
+ovhFct_AtCompletion %>% 
   gt::gt() %>% 
-  gt::tab_header(title = "Nonrecurring Overhead Factor At Completion by WBS Element", 
+  gt::tab_header(title = "Overhead Factors At Completion by WBS Element", 
                  subtitle = "Includes Only Lowest Level WBS with Reported Dollars") %>% 
   gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_percent(columns = c(3:ncol(ovhFct_Nonrecurring_AtCompletion)), decimals = 1)
+  gt::fmt_percent(columns = c(3:ncol(ovhFct_AtCompletion)), decimals = 1)
+```
+
+##### Nonrecurring
+
+The following table identifies the average Nonrecurring overhead factor At Completion by FunctionalElement for lowest level WBS elements.
+
+```{r ovhFct_AtCompletion_Nonrecurring}
+ovhFct_AtCompletion_Nonrecurring <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         Recurring_Nonrecurring == "Nonrecurring",
+         ToDate_AtCompletion == "AtCompletion",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`Engineering Overhead Factor` = 
+           sum(`Engineering Overhead_Dollars` / `Direct Engineering Labor_Dollars`, 
+               na.rm = TRUE),
+         `Manufacturing Operations Overhead Factor` = 
+           sum(`Manufacturing Operations Overhead_Dollars` / `Direct Manufacturing Labor_Dollars`,
+               na.rm = TRUE),
+         `Material Handling/Overhead Factor` = 
+           sum((`Raw Material_Dollars`
+                + `Purchased Parts_Dollars`
+                + `Purchased Equipment_Dollars`) 
+                / `Material Handling/Overhead_Dollars`,
+               na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `Engineering Overhead Factor`,
+         `Manufacturing Operations Overhead Factor`,
+         `Material Handling/Overhead Factor`) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
+  ungroup()
+
+ovhFct_AtCompletion_Nonrecurring %>% 
+  gt::gt() %>% 
+  gt::tab_header(title = "Nonrecurring Overhead Factors At Completion by WBS Element", 
+                 subtitle = "Includes Only Lowest Level WBS with Reported Dollars") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_percent(columns = c(3:ncol(ovhFct_AtCompletion_Nonrecurring)), decimals = 1)
 ```
 
 ##### Recurring
 
 The following table identifies the average Recurring overhead factor At Completion by FunctionalElement for lowest level WBS elements.
 
-```{r}
-ovhFct_Recurring_AtCompletion <- csdr %>% 
+```{r ovhFct_AtCompletion_Recurring}
+ovhFct_AtCompletion_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
          Recurring_Nonrecurring == "Recurring",
@@ -1329,21 +1558,57 @@ ovhFct_Recurring_AtCompletion <- csdr %>%
   filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>% 
   ungroup()
 
-ovhFct_Recurring_AtCompletion %>% 
+ovhFct_AtCompletion_Recurring %>% 
   gt::gt() %>% 
-  gt::tab_header(title = "Recurring Overhead Factor At Completion by WBS Element", 
+  gt::tab_header(title = "Recurring Overhead Factors At Completion by WBS Element", 
                  subtitle = "Includes Only Lowest Level WBS with Reported Dollars") %>% 
   gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
-  gt::fmt_percent(columns = c(3:ncol(ovhFct_Recurring_AtCompletion)), decimals = 1)
+  gt::fmt_percent(columns = c(3:ncol(ovhFct_AtCompletion_Recurring)), decimals = 1)
 ```
 
-#### Average Direct Engineering Overhead Rate To Date vs. At Completion
+#### Engineering Overhead Rate To Date vs. At Completion
+
+##### Total
+
+The following table identifies the average Direct Engineering Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r ovhFct_Eng}
+ovhFct_Eng <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Engineering Overhead_Dollars_ToDate` / `Direct Engineering Labor_Dollars_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Engineering Overhead_Dollars_AtCompletion` / `Direct Engineering Labor_Dollars_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta)) %>% 
+  ungroup()
+
+ovhFct_Eng %>% 
+  gt::gt(groupname_col = "FunctionalElement") %>% 
+  gt::tab_header(title = "Engineering Overhead Factor To Date vs. At Completion, Arranged by Decending Delta", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_percent(columns = c(3:ncol(ovhFct_Eng)), decimals = 1)
+```
 
 ##### Nonrecurring
 
 The following table identifies the average Nonrecurring Direct Engineering Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r ovhFct_Eng_Nonrecurring}
 ovhFct_Eng_Nonrecurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -1380,7 +1645,7 @@ ovhFct_Eng_Nonrecurring %>%
 
 The following table identifies the average Recurring Direct Engineering Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r ovhFct_Eng_Recurring}
 ovhFct_Eng_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -1413,13 +1678,49 @@ ovhFct_Eng_Recurring %>%
   gt::fmt_percent(columns = c(3:ncol(ovhFct_Eng_Recurring)), decimals = 1)
 ```
 
-#### Average Manufacturing Operations Overhead Factor To Date vs. At Completion
+#### Manufacturing Operations Overhead Factor To Date vs. At Completion
+
+##### Total
+
+The following table identifies the average Manufacturing Operations Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r ovhFct_Manf}
+ovhFct_Manf <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Manufacturing Operations Overhead_Dollars_ToDate` / `Manufacturing Operations Overhead_Dollars_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Manufacturing Operations Overhead_Dollars_AtCompletion` / `Manufacturing Operations Overhead_Dollars_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta)) %>% 
+  ungroup()
+
+ovhFct_Manf %>% 
+  gt::gt(groupname_col = "FunctionalElement") %>% 
+  gt::tab_header(title = "Manufacturing Operations Overhead Factor To Date vs. At Completion, Arranged by Decending Delta", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_percent(columns = c(3:ncol(ovhFct_Manf)), decimals = 1)
+```
 
 ##### Nonrecurring
 
 The following table identifies the average Nonrecurring Manufacturing Operations Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r ovhFct_Manf_Nonrecurring}
 ovhFct_Manf_Nonrecurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -1456,7 +1757,7 @@ ovhFct_Manf_Nonrecurring %>%
 
 The following table identifies the average Recurring Manufacturing Operations Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r ovhFct_Manf_Recurring}
 ovhFct_Manf_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -1489,13 +1790,49 @@ ovhFct_Manf_Recurring %>%
   gt::fmt_percent(columns = c(3:ncol(ovhFct_Manf_Recurring)), decimals = 1)
 ```
 
-#### Average Material Handling/Overhead Factor To Date vs. At Completion
+#### Material Handling/Overhead Factor To Date vs. At Completion
+
+##### Total
+
+The following table identifies the average Material Handling/Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
+
+```{r ovhFct_Mat}
+ovhFct_Mat <- csdr %>% 
+  filter(is_lowest == "TRUE",
+         UnitOfMeasure != "Units",
+         !is.na(FunctionalCategory)) %>% 
+  pivot_wider(id_cols     = c(WBSElementID,
+                              WBSElementName),
+              names_from  = c(FunctionalElement, UnitOfMeasure, ToDate_AtCompletion),
+              values_from = Value,
+              values_fn   = list(Value = sum)) %>% 
+  group_by(WBSElementID,
+           WBSElementName) %>% 
+  mutate(`To Date`       = sum(`Material Handling/Overhead_Dollars_ToDate` / `Material Handling/Overhead_Dollars_ToDate`, na.rm = TRUE),
+         `At Completion` = sum(`Material Handling/Overhead_Dollars_AtCompletion` / `Material Handling/Overhead_Dollars_AtCompletion`, na.rm = TRUE),
+         Delta           = sum(`To Date` - `At Completion`, na.rm = TRUE)) %>% 
+  select(WBSElementID,
+         WBSElementName,
+         `To Date`,
+         `At Completion`,
+         Delta) %>% 
+  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric) %>%
+  arrange(desc(Delta)) %>% 
+  ungroup()
+
+ovhFct_Mat %>% 
+  gt::gt(groupname_col = "FunctionalElement") %>% 
+  gt::tab_header(title = "Material Handling/Overhead Factor To Date vs. At Completion, Arranged by Decending Delta", 
+                 subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
+  gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
+  gt::fmt_percent(columns = c(3:ncol(ovhFct_Mat)), decimals = 1)
+```
 
 ##### Nonrecurring
 
 The following table identifies the average Nonrecurring Material Handling/Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r ovhFct_Mat_Nonrecurring}
 ovhFct_Mat_Nonrecurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -1532,7 +1869,7 @@ ovhFct_Mat_Nonrecurring %>%
 
 The following table identifies the average Recurring Material Handling/Overhead Factor To Date vs. At Completion and the difference (Delta) between those two values, for lowest level WBS elements, arranged in descending Delta order.
 
-```{r}
+```{r ovhFct_Mat_Recurring}
 ovhFct_Mat_Recurring <- csdr %>% 
   filter(is_lowest == "TRUE",
          UnitOfMeasure != "Units",
@@ -1563,41 +1900,6 @@ ovhFct_Mat_Recurring %>%
                  subtitle = "Includes Only Lowest Level WBS with Greater Than 0 Hours") %>% 
   gt::tab_options(table.font.size = "8", data_row.padding = gt::px(1)) %>% gt::cols_align(c("left"), columns = c("WBSElementID",	"WBSElementName")) %>%
   gt::fmt_percent(columns = c(3:ncol(ovhFct_Mat_Recurring)), decimals = 1)
-```
-
-
-```{r}
-
-# %>% 
-#   pivot_longer(cols = -c(1:2), names_to = "ToDate_AtCompletion", values_to = "Value") %>% 
-#   ggplot(aes(x = paste0(as.character(WBSElementID), " - ", WBSElementName), y = Value)) +
-#   geom_point() +
-#   coord_flip()
-```
-
-```{r eval=FALSE, include=FALSE}
-### INCOMPLETE ###
-csdr %>% 
-  filter(is_lowest == "TRUE",
-         UnitOfMeasure != "Units",
-         FunctionalElement %in% c("Direct Engineering Labor"),
-         !is.na(FunctionalCategory)) %>% 
-  pivot_wider(id_cols     = c(WBSElementID,
-                              WBSElementName),
-              names_from  = c(FunctionalElement, UnitOfMeasure, Recurring_Nonrecurring, ToDate_AtCompletion),
-              values_from = Value,
-              values_fn   = list(Value = sum)) %>% 
-  group_by(WBSElementID,
-           WBSElementName) %>% 
-  mutate(`Direct Engineering`   = sum(`Direct Engineering Labor_Dollars` / `Direct Engineering Labor_Hours`, na.rm = TRUE)) %>% 
-        # `Direct Tooling`       = sum(`Direct Quality Control Labor_Dollars` / `Direct Quality Control Labor_Hours`, na.rm = TRUE),
-        # `Direct Manufacturing` = sum(`Direct Manufacturing Labor_Dollars` / `Direct Manufacturing Labor_Hours`, na.rm = TRUE)) %>% 
-  select(WBSElementID,
-         WBSElementName,
-         `Direct Engineering`) %>% 
-        # `Direct Tooling`,
-        # `Direct Manufacturing`) %>% 
-  filter_if(.vars_predicate = any_vars(. > 0), .predicate = is.numeric)
 ```
 
 -------------------------------------------------------------------------------

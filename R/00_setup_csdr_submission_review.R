@@ -1,0 +1,16 @@
+
+library(magrittr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(wbstools)
+library(unpivotr)
+library(purrr)
+library(gt)
+library(openxlsx)
+
+source(here::here("R", "flat_file_class.R"))
+source(here::here("R", "read_flat_file.R"))
+source(here::here("R", "01_read_csdr_flat_file.R"))
+source(here::here("R", "02_read_csdr_dictionary.R"))
+source(here::here("R", "03_combine_flat_file_and_dictionary.R"))
